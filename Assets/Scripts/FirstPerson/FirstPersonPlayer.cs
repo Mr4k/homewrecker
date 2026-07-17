@@ -61,7 +61,8 @@ public class FirstPersonPlayer : MonoBehaviour
         if (_held != null)
         {
             var targetDisplacement = PullTarget.position - _held.transform.position;
-            var force = targetDisplacement * 100 - _held.Rigidbody.linearVelocity * 10;
+            var relativeVelocity = _held.Rigidbody.linearVelocity - Character.Motor.Velocity;
+            var force = targetDisplacement * 100 - relativeVelocity * 10;
             var normalizedForce = force.normalized;
             var magForce = force.magnitude;
             magForce = Math.Min(magForce, PullForce);
