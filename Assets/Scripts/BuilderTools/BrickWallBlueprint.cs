@@ -45,7 +45,11 @@ class BrickWallBlueprint : MonoBehaviour
 
     public void RefreshWall()
     {
-        Instantiate(BrickPrefab, this.gameObject.transform);
+        var outputContainer = GetComponentInChildren<BlueprintOutputContainer>();
+        if (outputContainer == null)
+        {
+            var containerGameObject = new GameObject("BlueprintOutputContainer", typeof(BlueprintOutputContainer));
+        }
     }
 
     private float CalculateBrickDepth()
