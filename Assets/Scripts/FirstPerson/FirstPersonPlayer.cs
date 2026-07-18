@@ -76,6 +76,7 @@ public class FirstPersonPlayer : MonoBehaviour
             var magForce = force.magnitude;
             magForce = Math.Min(magForce, PullForce);
             // note that surfing is a bug. Should we keep it? Could be fun
+            // to combat surfing maybe we just make it so that you cannot pull something inside yourself
             _held.Rigidbody.AddForceAtPosition(normalizedForce * magForce * fixedDeltaTimeMul, heldGrabPointWorld);
             _held.Rigidbody.AddTorque(-_held.Rigidbody.angularVelocity * 0.1f * fixedDeltaTimeMul);
         }
