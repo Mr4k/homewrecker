@@ -44,20 +44,28 @@ public class FirstPersonPlayer : MonoBehaviour
         _pitch = Mathf.Clamp(_pitch - look.y, -89f, 89f);
         CameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
-        Draggable target = _held;
-        if (target == null && Physics.Raycast(CameraTransform.position, CameraTransform.forward, out RaycastHit hit, GrabRange))
+        if (_held == null && Physics.Raycast(CameraTransform.position, CameraTransform.forward, out RaycastHit hit, GrabRange))
         {
-            target = hit.rigidbody ? hit.rigidbody.GetComponent<Draggable>() : null;
-            if (target)
+            if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())
             {
-                _heldGrabPoint = target.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
+                if (Input.GetMouseButtonDown(0))
+                {
+                    var draggable = hit.rigidbody.GetComponent<Draggable>();
+                    _held = draggable;
+                    _heldGrabPoint = _held.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
+                }
+            }
+            else if (hit.collider && hit.collider.GetComponent<Smashable>())
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    Debug.Log("smashhhed!");
+                    var smashable = hit.collider.GetComponent<Smashable>();
+                    smashable.Smash(CameraTransform.position, 400);
+                }
             }
         }
-        if (Input.GetMouseButtonDown(0))
-        {
-            _held = target;
-        }
-        else if (!Input.GetMouseButton(0))
+        if (_held != null && !Input.GetMouseButton(0))
         {
             _held = null;
         }
