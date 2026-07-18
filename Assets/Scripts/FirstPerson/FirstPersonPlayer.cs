@@ -14,8 +14,10 @@ public class FirstPersonPlayer : MonoBehaviour
     public float GrabRange = 5f;
     public Transform PullTarget;
     public float PullForce = 60f;
+    public float StablizerTorque = 10f;
     public float Damping = 8f;
     public Draggable _held;
+    public Vector3 _heldGrabPoint;
 
     private void Start()
     {
@@ -44,7 +46,13 @@ public class FirstPersonPlayer : MonoBehaviour
 
         Draggable target = _held;
         if (target == null && Physics.Raycast(CameraTransform.position, CameraTransform.forward, out RaycastHit hit, GrabRange))
+        {
             target = hit.rigidbody ? hit.rigidbody.GetComponent<Draggable>() : null;
+            if (target)
+            {
+                _heldGrabPoint = target.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
+            }
+        }
         if (Input.GetMouseButtonDown(0))
         {
             _held = target;
@@ -60,13 +68,16 @@ public class FirstPersonPlayer : MonoBehaviour
         float fixedDeltaTimeMul = Time.fixedDeltaTime * 60;
         if (_held != null)
         {
-            var targetDisplacement = PullTarget.position - _held.transform.position;
+            var heldGrabPointWorld = _held.transform.localToWorldMatrix.MultiplyPoint(_heldGrabPoint);
+            var targetDisplacement = PullTarget.position - heldGrabPointWorld;
             var relativeVelocity = _held.Rigidbody.linearVelocity - Character.Motor.Velocity;
             var force = targetDisplacement * 100 - relativeVelocity * 10;
             var normalizedForce = force.normalized;
             var magForce = force.magnitude;
             magForce = Math.Min(magForce, PullForce);
-            _held.Rigidbody.AddForce(normalizedForce * magForce * fixedDeltaTimeMul);
+            // note that surfing is a bug. Should we keep it? Could be fun
+            _held.Rigidbody.AddForceAtPosition(normalizedForce * magForce * fixedDeltaTimeMul, heldGrabPointWorld);
+            _held.Rigidbody.AddTorque(-_held.Rigidbody.angularVelocity * 0.1f * fixedDeltaTimeMul);
         }
     }
 }
