@@ -7,6 +7,17 @@ public class Smashable : MonoBehaviour
     public Rigidbody DebrisPrefab;
     private Renderer _renderer;
     private Color _baseColor;
+    private int groupId;
+
+    public void Init(int groupId)
+    {
+        this.groupId = groupId;
+    }
+
+    public bool SharesGroup(Smashable other)
+    {
+        return other.groupId == groupId;
+    }
 
     private void Awake()
     {

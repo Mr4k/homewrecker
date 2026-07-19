@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -57,11 +58,25 @@ public class FirstPersonPlayer : MonoBehaviour
             }
             else if (hit.collider && hit.collider.GetComponent<Smashable>())
             {
+                var smashableGroupObjects = new List<Smashable>();
+                var smashable = hit.collider.GetComponent<Smashable>();
+                smashableGroupObjects.Add(smashable);
+                var colliders = Physics.OverlapSphere(hit.point, 0.25f);
+                foreach (var col in colliders)
+                {
+                    var otherSmashable = col.gameObject.GetComponent<Smashable>();
+                    if (otherSmashable != null && otherSmashable.SharesGroup(smashable))
+                    {
+                        smashableGroupObjects.Add(otherSmashable);
+                    }
+                }
                 if (Input.GetMouseButtonDown(0))
                 {
                     Debug.Log("smashhhed!");
-                    var smashable = hit.collider.GetComponent<Smashable>();
-                    smashable.Smash(CameraTransform.position, 400);
+                    foreach (var s in smashableGroupObjects)
+                    {
+                        s.Smash(CameraTransform.position, 400);
+                    }
                 }
             }
         }

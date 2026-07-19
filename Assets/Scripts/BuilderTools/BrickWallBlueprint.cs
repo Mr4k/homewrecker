@@ -6,7 +6,7 @@ using UnityEngine;
 
 class BrickWallBlueprint : MonoBehaviour
 {
-    public Transform BrickPrefab;
+    public Smashable BrickPrefab;
     public float HorizontalSpacingBetweenBricksSizeAsPercentageOfBrickSize = 0.1f;
     public float VerticalSpacingBetweenBricksSizeAsPercentageOfBrickSize = 0.1f;
     public Vector3 WallSize;
@@ -53,6 +53,7 @@ class BrickWallBlueprint : MonoBehaviour
         var containerGameObject = new GameObject("BlueprintOutputContainer", typeof(BlueprintOutputContainer));
         containerGameObject.transform.SetParent(transform);
         containerGameObject.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+        int groupId = containerGameObject.GetInstanceID();
         (float brickWidth, float spacerWidth, float spacerWidthHalf) = CalculateBrickWidthAndSpacerWidth();
         (float brickHeight, float spacerHeight) = CalculateBrickHeightAndSpacerHeight();
         float brickDepth = CalculateBrickDepth();
@@ -73,7 +74,8 @@ class BrickWallBlueprint : MonoBehaviour
             if (y % 2 == 1)
             {
                 // use a half brick at the start and end
-                var halfBrick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                var halfBrick = Instantiate(BrickPrefab, containerGameObject.transform);
+                halfBrick.Init(groupId);
                 halfBrick.transform.localScale = new Vector3(brickWidth / 2, brickHeight, brickDepth);
                 halfBrick.transform.localPosition = new Vector3(nextX + brickWidth / 4, nextY + brickHeight / 2, 0);
                 nextX += brickWidth / 2 + rowSpacerWidth;
@@ -81,7 +83,8 @@ class BrickWallBlueprint : MonoBehaviour
             }
             for (int x = 0; x < numHorizontalBricks; x++)
             {
-                var brick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                var brick = Instantiate(BrickPrefab, containerGameObject.transform);
+                brick.Init(groupId);
                 brick.transform.localScale = new Vector3(brickWidth, brickHeight, brickDepth);
                 brick.transform.localPosition = new Vector3(nextX + brickWidth / 2, nextY + brickHeight / 2, 0);
                 nextX += brickWidth + rowSpacerWidth;
@@ -89,7 +92,8 @@ class BrickWallBlueprint : MonoBehaviour
             if (y % 2 == 1)
             {
                 // use a half brick at the start and end
-                var halfBrick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                var halfBrick = Instantiate(BrickPrefab, containerGameObject.transform);
+                halfBrick.Init(groupId);
                 halfBrick.transform.localScale = new Vector3(brickWidth / 2, brickHeight, brickDepth);
                 halfBrick.transform.localPosition = new Vector3(nextX + brickWidth / 4, nextY + brickHeight / 2, 0);
             }
