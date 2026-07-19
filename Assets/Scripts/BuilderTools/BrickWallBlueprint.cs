@@ -15,18 +15,18 @@ class BrickWallBlueprint : MonoBehaviour
 
     private static int ToolVersion = 1;
 
-    private Tuple<float, float> CalculateBrickWidthAndSpacerWidth()
+    private Tuple<float, float, float> CalculateBrickWidthAndSpacerWidth()
     {
         int numHorizontalSpacers = (int)(WallWidthInBricks == 0 ? 0 : WallWidthInBricks - 1);
         if (numHorizontalSpacers == 0)
         {
-            return Tuple.Create(WallSize.x, 0.0f);
+            return Tuple.Create(WallSize.x, 0.0f, 0.0f);
         }
         float amountSpacerSpace = numHorizontalSpacers * HorizontalSpacingBetweenBricksSizeAsPercentageOfBrickSize;
         float amountBrick = WallWidthInBricks;
         float totalBrickWidth = WallSize.x * amountBrick / (amountBrick + amountSpacerSpace);
         float totalSpacerWidth = WallSize.x - totalBrickWidth;
-        return Tuple.Create(totalBrickWidth / WallWidthInBricks, totalSpacerWidth / numHorizontalSpacers);
+        return Tuple.Create(totalBrickWidth / WallWidthInBricks, totalSpacerWidth / numHorizontalSpacers, totalSpacerWidth / (numHorizontalSpacers + 1));
     }
 
     private Tuple<float, float> CalculateBrickHeightAndSpacerHeight()
@@ -46,9 +46,54 @@ class BrickWallBlueprint : MonoBehaviour
     public void RefreshWall()
     {
         var outputContainer = GetComponentInChildren<BlueprintOutputContainer>();
-        if (outputContainer == null)
+        if (outputContainer != null)
         {
-            var containerGameObject = new GameObject("BlueprintOutputContainer", typeof(BlueprintOutputContainer));
+            DestroyImmediate(outputContainer.gameObject);
+        }
+        var containerGameObject = new GameObject("BlueprintOutputContainer", typeof(BlueprintOutputContainer));
+        containerGameObject.transform.SetParent(transform);
+        containerGameObject.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+        (float brickWidth, float spacerWidth, float spacerWidthHalf) = CalculateBrickWidthAndSpacerWidth();
+        (float brickHeight, float spacerHeight) = CalculateBrickHeightAndSpacerHeight();
+        float brickDepth = CalculateBrickDepth();
+        float nextY = -WallSize.y / 2;
+        for (int y = 0; y < WallHeightInBricks; y++)
+        {
+            float rowSpacerWidth = spacerWidth;
+            float nextX = -WallSize.x / 2;
+            uint numHorizontalBricks = WallWidthInBricks;
+            if (WallWidthInBricks == 0)
+            {
+                break;
+            }
+            if (y % 2 == 1)
+            {
+                rowSpacerWidth = spacerWidthHalf;
+            }
+            if (y % 2 == 1)
+            {
+                // use a half brick at the start and end
+                var halfBrick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                halfBrick.transform.localScale = new Vector3(brickWidth / 2, brickHeight, brickDepth);
+                halfBrick.transform.localPosition = new Vector3(nextX + brickWidth / 4, nextY + brickHeight / 2, 0);
+                nextX += brickWidth / 2 + rowSpacerWidth;
+                numHorizontalBricks -= 1;
+            }
+            for (int x = 0; x < numHorizontalBricks; x++)
+            {
+                var brick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                brick.transform.localScale = new Vector3(brickWidth, brickHeight, brickDepth);
+                brick.transform.localPosition = new Vector3(nextX + brickWidth / 2, nextY + brickHeight / 2, 0);
+                nextX += brickWidth + rowSpacerWidth;
+            }
+            if (y % 2 == 1)
+            {
+                // use a half brick at the start and end
+                var halfBrick = Instantiate(this.BrickPrefab, containerGameObject.transform);
+                halfBrick.transform.localScale = new Vector3(brickWidth / 2, brickHeight, brickDepth);
+                halfBrick.transform.localPosition = new Vector3(nextX + brickWidth / 4, nextY + brickHeight / 2, 0);
+            }
+            nextY += brickHeight + spacerHeight;
         }
     }
 
@@ -60,7 +105,7 @@ class BrickWallBlueprint : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.DrawCube(Vector3.zero, WallSize);
+        Gizmos.DrawWireCube(Vector3.zero, WallSize);
     }
 }
 

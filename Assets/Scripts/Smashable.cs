@@ -26,7 +26,8 @@ public class Smashable : MonoBehaviour
 
     public void Smash(Vector3 originPoint, float smashForce)
     {
-        var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation);
+        var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation, transform.parent);
+        debris.transform.localScale = transform.localScale;
         Vector3 force = (transform.position - originPoint) * smashForce;
         debris.AddForce(force);
         Destroy(this.gameObject);

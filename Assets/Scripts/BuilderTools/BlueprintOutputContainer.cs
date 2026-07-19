@@ -1,5 +1,5 @@
 using UnityEngine;
-public class BlueprintOutputContainer
+public class BlueprintOutputContainer : MonoBehaviour
 {
 
 }
