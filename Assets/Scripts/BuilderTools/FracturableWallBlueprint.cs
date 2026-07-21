@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -150,13 +151,128 @@ class FracturableWallBlueprint : BaseBlueprint
                 graph.AddLast(fakeEdge);
             }
         }
+    }
 
-        // (0, 0)  ---- > (1, 0)
-        //       / \    |
-        //        |     |
-        //        |    \ /
-        // (0, 1)  <----  (1, 1)
+    struct EmbeddedVertex
+    {
+        public VPoint EmbeddedPoint;
+        public List<Tuple<double, EmbeddedVertex>> LinkedVerts;
+    }
 
+    public static List<List<Vector2>> GetInteriorPolygonsFromConnectedEmbeddedPlanarGraph(LinkedList<VEdge> graph)
+    {
+        // assumption, we pray points only appear once in the output
+        Dictionary<VPoint, EmbeddedVertex> embeddedVerts = new Dictionary<VPoint, EmbeddedVertex>();
+
+        // create graph with no connections
+        foreach (var edge in graph)
+        {
+            if (!embeddedVerts.ContainsKey(edge.Start))
+            {
+                embeddedVerts[edge.Start] = new EmbeddedVertex
+                {
+                    EmbeddedPoint = edge.Start,
+                    LinkedVerts = new List<Tuple<double, EmbeddedVertex>>(),
+                };
+            }
+            if (!embeddedVerts.ContainsKey(edge.End))
+            {
+                embeddedVerts[edge.End] = new EmbeddedVertex
+                {
+                    EmbeddedPoint = edge.End,
+                    LinkedVerts = new List<Tuple<double, EmbeddedVertex>>(),
+                };
+            }
+        }
+
+        // add connections
+        foreach (var edge in graph)
+        {
+            var start = embeddedVerts[edge.Start];
+            var end = embeddedVerts[edge.End];
+            var angleStartToEnd = Math.Atan2(end.EmbeddedPoint.Y - start.EmbeddedPoint.Y, end.EmbeddedPoint.X - start.EmbeddedPoint.X);
+            start.LinkedVerts.Add(Tuple.Create(angleStartToEnd, end));
+            var angleEndToStart = Math.Atan2(start.EmbeddedPoint.Y - end.EmbeddedPoint.Y, start.EmbeddedPoint.X - end.EmbeddedPoint.X);
+            end.LinkedVerts.Add(Tuple.Create(angleEndToStart, start));
+        }
+
+        // sort each verts connections by angle in clockwise order
+        foreach (var vert in embeddedVerts.Values)
+        {
+            vert.LinkedVerts.Sort((a, b) =>
+            {
+                var aAng = a.Item1;
+                var bAng = b.Item1;
+                return aAng.CompareTo(bAng);
+            });
+        }
+
+        List<List<Vector2>> polygons = new List<List<Vector2>>();
+        // assumption each directed edge can only be used once
+        HashSet<Tuple<EmbeddedVertex, EmbeddedVertex>> seenDirectedEdges = new HashSet<Tuple<EmbeddedVertex, EmbeddedVertex>>();
+
+        // n^2 I think but whatever
+        foreach (var vert in embeddedVerts.Values)
+        {
+            Tuple<double, EmbeddedVertex> outGoingConnection = null;
+            for (int i = 0; i < vert.LinkedVerts.Count; i++)
+            {
+                var outEdge = Tuple.Create(vert, vert.LinkedVerts[i].Item2);
+                if (seenDirectedEdges.Contains(outEdge))
+                {
+                    continue;
+                }
+                outGoingConnection = vert.LinkedVerts[i];
+                seenDirectedEdges.Add(outEdge);
+                break;
+            }
+            if (outGoingConnection == null)
+            {
+                continue;
+            }
+
+            List<Vector2> polygon = new List<Vector2>()
+            {
+                new Vector2((float)vert.EmbeddedPoint.X, (float)vert.EmbeddedPoint.Y),
+            };
+            var prevVert = vert;
+            var (_, currVert) = outGoingConnection;
+            while (currVert.EmbeddedPoint != vert.EmbeddedPoint)
+            {
+                polygon.Add(new Vector2((float)currVert.EmbeddedPoint.X, (float)currVert.EmbeddedPoint.Y));
+                // find this vertex in their list
+                int index = -1;
+                for (int i = 0; i < currVert.LinkedVerts.Count; i++)
+                {
+                    if (currVert.LinkedVerts[i].Item2.EmbeddedPoint == prevVert.EmbeddedPoint)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index < 0)
+                {
+                    throw new Exception("could not find matching index for vertex");
+                }
+
+                // this is the vertex "right before" the current edge
+                int nextIndex = index - 1;
+                if (nextIndex < 0)
+                {
+                    nextIndex += currVert.LinkedVerts.Count;
+                }
+
+                prevVert = currVert;
+                currVert = currVert.LinkedVerts[nextIndex].Item2;
+                var outEdge = Tuple.Create(prevVert, currVert);
+                if (seenDirectedEdges.Contains(outEdge))
+                {
+                    throw new Exception("next edge in face has already been seen");
+                }
+                seenDirectedEdges.Add(outEdge);
+            }
+        }
+        return polygons;
     }
 
     private void OnDrawGizmos()
