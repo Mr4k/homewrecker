@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Burst.Intrinsics;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -72,6 +73,69 @@ class FracturableWallBlueprint : BaseBlueprint
         {
             Debug.Log("Polygon:" + string.Join(",", p.Select(p => p.ToString())));
         }
+        var triangulatedPolygons = new List<TriangluatedPolygon>();
+        foreach (var p in polygons)
+        {
+            triangulatedPolygons.Add(TriangulateConvexPolygon(p, transform.right, -transform.up));
+        }
+
+        var outputContainer = GetComponentInChildren<BlueprintOutputContainer>();
+        if (outputContainer != null)
+        {
+            DestroyImmediate(outputContainer.gameObject);
+        }
+        var containerGameObject = new GameObject("BlueprintOutputContainer", typeof(BlueprintOutputContainer));
+        containerGameObject.transform.SetParent(transform);
+        containerGameObject.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+        foreach (var tp in triangulatedPolygons)
+        {
+            var mesh = MeshFromTriangulatedPolygon(tp);
+            GameObject gameObject = new GameObject();
+            gameObject.transform.SetPositionAndRotation(Vector3.zero, quaternion.identity);
+            gameObject.transform.SetParent(containerGameObject.transform, false);
+
+            MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = new Material(Shader.Find("Standard"));
+
+            MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
+            meshFilter.mesh = mesh;
+        }
+    }
+
+    public struct TriangluatedPolygon
+    {
+        public List<Vector3> vertices;
+        public List<int> indexes;
+    }
+    public static TriangluatedPolygon TriangulateConvexPolygon(List<Vector2> polygon, Vector3 right, Vector3 down)
+    {
+        // use a spoke triangulation at a new centroid point b/c it seems better than fan triangulation for rendering / collision
+        Vector2 center2d = Vector2.zero;
+        foreach (var pt in polygon)
+        {
+            center2d += pt;
+        }
+        center2d /= polygon.Count;
+        List<Vector3> verts3d = new List<Vector3>();
+        foreach (var vert2d in polygon)
+        {
+            verts3d.Add(right * vert2d.x + down * vert2d.y);
+        }
+        verts3d.Add(center2d.x * right + center2d.y * down);
+        int centerIdx = verts3d.Count - 1;
+        List<int> triangleIndexes = new List<int>();
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            triangleIndexes.Add(i);
+            triangleIndexes.Add((i + 1) % polygon.Count);
+            triangleIndexes.Add(centerIdx);
+        }
+        return new TriangluatedPolygon
+        {
+            vertices = verts3d,
+            indexes = triangleIndexes,
+        };
     }
 
     public static void EmbedVornoiGraphInRectangle(LinkedList<VEdge> graph, double minX, double minY, double maxX, double maxY)
@@ -262,7 +326,11 @@ class FracturableWallBlueprint : BaseBlueprint
                 }
 
                 // this is the vertex "right after" the current edge
-                int nextIndex = (index + 1) % currVert.LinkedVerts.Count; ;
+                int nextIndex = index - 1;
+                if (nextIndex < 0)
+                {
+                    nextIndex += currVert.LinkedVerts.Count;
+                }
 
                 prevVert = currVert;
                 currVert = currVert.LinkedVerts[nextIndex].Item2;
@@ -274,7 +342,7 @@ class FracturableWallBlueprint : BaseBlueprint
                 seenDirectedEdges.Add(outEdge);
             }
             // exclude the outside face
-            if (DeterminePolygonWindingOrder(polygon) < 0)
+            if (DeterminePolygonWindingOrder(polygon) > 0)
             {
                 polygons.Add(polygon);
             }
@@ -293,6 +361,16 @@ class FracturableWallBlueprint : BaseBlueprint
         return Math.Sign(Vector3.Cross(e1, e2).z);
     }
 
+    public static Mesh MeshFromTriangulatedPolygon(TriangluatedPolygon poly)
+    {
+        var mesh = new Mesh
+        {
+            vertices = poly.vertices.ToArray(),
+            triangles = poly.indexes.ToArray()
+        };
+        return mesh;
+    }
+
     private void OnDrawGizmos()
     {
         int i = 0;
@@ -300,8 +378,8 @@ class FracturableWallBlueprint : BaseBlueprint
         foreach (var e in edges)
         {
             Gizmos.color = colors[i % colors.Length];
-            Vector3 start = (float)e.Start.X * transform.right + (float)e.Start.Y * transform.up + transform.position;
-            Vector3 end = (float)e.End.X * transform.right + (float)e.End.Y * transform.up + transform.position;
+            Vector3 start = (float)e.Start.X * transform.right + (float)e.Start.Y * -transform.up + transform.position;
+            Vector3 end = (float)e.End.X * transform.right + (float)e.End.Y * -transform.up + transform.position;
             Gizmos.DrawLine(start, end);
             i++;
         }
