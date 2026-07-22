@@ -67,6 +67,11 @@ class FracturableWallBlueprint : BaseBlueprint
         {
             Debug.Log("edge " + e.Start + "," + e.End);
         }
+        var polygons = GetInteriorPolygonsFromConnectedEmbeddedPlanarGraph(edges);
+        foreach (var p in polygons)
+        {
+            Debug.Log("Polygon:" + string.Join(",", p.Select(p => p.ToString())));
+        }
     }
 
     public static void EmbedVornoiGraphInRectangle(LinkedList<VEdge> graph, double minX, double minY, double maxX, double maxY)
@@ -209,6 +214,7 @@ class FracturableWallBlueprint : BaseBlueprint
 
         List<List<Vector2>> polygons = new List<List<Vector2>>();
         // assumption each directed edge can only be used once
+        // each undirected edge is used 2x but note this will mean we will get a outer face as well
         HashSet<Tuple<EmbeddedVertex, EmbeddedVertex>> seenDirectedEdges = new HashSet<Tuple<EmbeddedVertex, EmbeddedVertex>>();
 
         // n^2 I think but whatever
@@ -255,12 +261,8 @@ class FracturableWallBlueprint : BaseBlueprint
                     throw new Exception("could not find matching index for vertex");
                 }
 
-                // this is the vertex "right before" the current edge
-                int nextIndex = index - 1;
-                if (nextIndex < 0)
-                {
-                    nextIndex += currVert.LinkedVerts.Count;
-                }
+                // this is the vertex "right after" the current edge
+                int nextIndex = (index + 1) % currVert.LinkedVerts.Count; ;
 
                 prevVert = currVert;
                 currVert = currVert.LinkedVerts[nextIndex].Item2;
@@ -271,8 +273,24 @@ class FracturableWallBlueprint : BaseBlueprint
                 }
                 seenDirectedEdges.Add(outEdge);
             }
+            // exclude the outside face
+            if (DeterminePolygonWindingOrder(polygon) < 0)
+            {
+                polygons.Add(polygon);
+            }
         }
         return polygons;
+    }
+
+    public static int DeterminePolygonWindingOrder(List<Vector2> polygon)
+    {
+        // a closed polygon must have at least 3 non colinear points
+        var a = polygon[0];
+        var b = polygon[1];
+        var c = polygon[2];
+        Vector3 e1 = b - a;
+        Vector3 e2 = c - b;
+        return Math.Sign(Vector3.Cross(e1, e2).z);
     }
 
     private void OnDrawGizmos()

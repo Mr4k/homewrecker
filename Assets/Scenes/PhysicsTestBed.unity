@@ -10207,7 +10207,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FracturableWallBlueprint
   WallSize: {x: 1, y: 1, z: 1}
-  NumShatterPoints: 100
+  NumShatterPoints: 11
   minPointFreeRadiusPct: 0.05
 --- !u!1 &170668141
 GameObject:
