@@ -65,7 +65,7 @@ public class FirstPersonPlayer : MonoBehaviour
                 foreach (var col in colliders)
                 {
                     var otherSmashable = col.gameObject.GetComponent<Smashable>();
-                    if (otherSmashable != null && otherSmashable.SharesGroup(smashable))
+                    if (otherSmashable != null && otherSmashable != smashable && otherSmashable.SharesGroup(smashable))
                     {
                         smashableGroupObjects.Add(otherSmashable);
                     }

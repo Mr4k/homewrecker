@@ -35,7 +35,7 @@ public class Smashable : MonoBehaviour
 
     }
 
-    public void Smash(Vector3 originPoint, float smashForce)
+    public virtual void Smash(Vector3 originPoint, float smashForce)
     {
         var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation, transform.parent);
         debris.transform.localScale = transform.localScale;

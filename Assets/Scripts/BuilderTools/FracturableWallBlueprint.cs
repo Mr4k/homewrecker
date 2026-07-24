@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using VoronoiLib;
@@ -99,6 +100,11 @@ class FracturableWallBlueprint : BaseBlueprint
 
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
             meshFilter.mesh = mesh;
+
+            MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
+            meshCollider.sharedMesh = mesh;
+
+            gameObject.AddComponent<MeshSmashable>();
         }
     }
 
