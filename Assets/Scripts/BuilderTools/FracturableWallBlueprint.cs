@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.Burst.Intrinsics;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering;
 using VoronoiLib;
 using VoronoiLib.Structures;
 
@@ -15,6 +13,7 @@ class FracturableWallBlueprint : BaseBlueprint
     public int NumShatterPoints = 1;
     public float minPointFreeRadiusPct = 0.05f;
     public LinkedList<VEdge> edges = new LinkedList<VEdge>();
+    public Material MaterialForMesh;
 
     public override void RefreshBlueprint()
     {
@@ -76,7 +75,7 @@ class FracturableWallBlueprint : BaseBlueprint
         var triangulatedPolygons = new List<TriangluatedPolygon>();
         foreach (var p in polygons)
         {
-            triangulatedPolygons.Add(TriangulateConvexPolygon(p, transform.right, -transform.up));
+            triangulatedPolygons.Add(CreateWallChunkTriangleMesh(p, transform.right, -transform.up, transform.forward, WallSize.z));
         }
 
         var outputContainer = GetComponentInChildren<BlueprintOutputContainer>();
@@ -96,7 +95,7 @@ class FracturableWallBlueprint : BaseBlueprint
             gameObject.transform.SetParent(containerGameObject.transform, false);
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = new Material(Shader.Find("Standard"));
+            meshRenderer.sharedMaterial = MaterialForMesh;
 
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
             meshFilter.mesh = mesh;
@@ -106,6 +105,7 @@ class FracturableWallBlueprint : BaseBlueprint
     public struct TriangluatedPolygon
     {
         public List<Vector3> vertices;
+        public List<Vector3> normals;
         public List<int> indexes;
     }
     public static TriangluatedPolygon TriangulateConvexPolygon(List<Vector2> polygon, Vector3 right, Vector3 down)
@@ -135,6 +135,93 @@ class FracturableWallBlueprint : BaseBlueprint
         {
             vertices = verts3d,
             indexes = triangleIndexes,
+        };
+    }
+
+    public static TriangluatedPolygon CreateWallChunkTriangleMesh(List<Vector2> polygon, Vector3 right, Vector3 down, Vector3 forward, float depth)
+    {
+        // use a spoke triangulation at a new centroid point b/c it seems better than fan triangulation for rendering / collision
+        Vector2 center2d = Vector2.zero;
+        foreach (var pt in polygon)
+        {
+            center2d += pt;
+        }
+        center2d /= polygon.Count;
+
+        List<Vector3> frontFaceVerts3d = new List<Vector3>();
+        List<Vector3> frontFaceVertNormals = new List<Vector3>();
+        List<Vector3> backFaceVerts3d = new List<Vector3>();
+        List<Vector3> backFaceVertNormals = new List<Vector3>();
+        var frontFaceNormal = new Vector3(0, 0, -1);
+        var backFaceNormal = new Vector3(0, 0, 1);
+        // construct the front and back faces
+        foreach (var vert2d in polygon)
+        {
+            var frontVertexPos = right * vert2d.x + down * vert2d.y - forward * depth / 2;
+            var backVertexPos = right * vert2d.x + down * vert2d.y + forward * depth / 2;
+            frontFaceVerts3d.Add(frontVertexPos);
+            frontFaceVertNormals.Add(frontFaceNormal);
+            backFaceVerts3d.Add(backVertexPos);
+            backFaceVertNormals.Add(backFaceNormal);
+        }
+        backFaceVerts3d.Reverse();
+        frontFaceVerts3d.Add(center2d.x * right + center2d.y * down - forward * depth / 2);
+        frontFaceVertNormals.Add(frontFaceNormal);
+        backFaceVerts3d.Add(center2d.x * right + center2d.y * down + forward * depth / 2);
+        backFaceVertNormals.Add(backFaceNormal);
+
+        int centerIdx = frontFaceVerts3d.Count - 1;
+        List<int> frontTriangleIndexes = new List<int>();
+        List<int> backTriangleIndexes = new List<int>();
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            int nextI = (i + 1) % polygon.Count;
+            frontTriangleIndexes.Add(i);
+            frontTriangleIndexes.Add(nextI);
+            frontTriangleIndexes.Add(centerIdx);
+
+            int backTriangleVertexOffset = frontFaceVerts3d.Count;
+            backTriangleIndexes.Add(i + backTriangleVertexOffset);
+            backTriangleIndexes.Add(nextI + backTriangleVertexOffset);
+            backTriangleIndexes.Add(centerIdx + backTriangleVertexOffset);
+        }
+
+        List<Vector3> sideFaceVerts3d = new List<Vector3>();
+        List<Vector3> sideFaceVertNormals = new List<Vector3>();
+        List<int> sideTriangleIndexes = new List<int>();
+        int sideTriangleVertexOffset = frontFaceVerts3d.Count + backFaceVerts3d.Count;
+
+        // construct the side faces
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            var a = polygon[i];
+            var b = polygon[(i + 1) % polygon.Count];
+            var aFrontVertexPos = right * a.x + down * a.y - forward * depth / 2;
+            var aBackVertexPos = right * a.x + down * a.y + forward * depth / 2;
+            var bFrontVertexPos = right * b.x + down * b.y - forward * depth / 2;
+            var bBackVertexPos = right * b.x + down * b.y + forward * depth / 2;
+            var normal = Vector3.Cross(aFrontVertexPos - bFrontVertexPos, bBackVertexPos - bFrontVertexPos);
+
+            sideFaceVerts3d.Add(aFrontVertexPos);
+            sideFaceVerts3d.Add(aBackVertexPos);
+            sideFaceVerts3d.Add(bFrontVertexPos);
+            sideFaceVerts3d.Add(bBackVertexPos);
+            sideFaceVertNormals.Add(normal);
+            sideFaceVertNormals.Add(normal);
+            sideFaceVertNormals.Add(normal);
+            sideFaceVertNormals.Add(normal);
+
+            int startIdx = i * 4 + sideTriangleVertexOffset;
+            sideTriangleIndexes.Add(startIdx + 3);
+            sideTriangleIndexes.Add(startIdx + 2);
+            sideTriangleIndexes.Add(startIdx);
+        }
+
+        return new TriangluatedPolygon
+        {
+            vertices = frontFaceVerts3d.Concat(backFaceVerts3d).Concat(sideFaceVerts3d).ToList(),
+            normals = frontFaceVertNormals.Concat(backFaceVertNormals).Concat(sideFaceVertNormals).ToList(),
+            indexes = frontTriangleIndexes.Concat(backTriangleIndexes).Concat(sideTriangleIndexes).ToList()
         };
     }
 
@@ -366,7 +453,8 @@ class FracturableWallBlueprint : BaseBlueprint
         var mesh = new Mesh
         {
             vertices = poly.vertices.ToArray(),
-            triangles = poly.indexes.ToArray()
+            triangles = poly.indexes.ToArray(),
+            normals = poly.normals.ToArray(),
         };
         return mesh;
     }
