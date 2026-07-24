@@ -215,6 +215,9 @@ class FracturableWallBlueprint : BaseBlueprint
             sideTriangleIndexes.Add(startIdx + 3);
             sideTriangleIndexes.Add(startIdx + 2);
             sideTriangleIndexes.Add(startIdx);
+            sideTriangleIndexes.Add(startIdx);
+            sideTriangleIndexes.Add(startIdx + 1);
+            sideTriangleIndexes.Add(startIdx + 3);
         }
 
         return new TriangluatedPolygon
