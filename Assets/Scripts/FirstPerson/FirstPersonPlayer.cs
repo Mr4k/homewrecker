@@ -84,6 +84,7 @@ public class FirstPersonPlayer : MonoBehaviour
         {
             _held = null;
         }
+        GetComponent<CutTool>().ActiveToolUpdate(CameraTransform);
     }
 
     private void FixedUpdate()
