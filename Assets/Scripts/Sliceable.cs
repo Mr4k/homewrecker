@@ -42,14 +42,6 @@ public class Sliceable : MonoBehaviour
         Vector3 originToStart = startPoint - cameraPosition;
         Vector3 cutPlaneNormal = Vector3.Cross(endPoint - startPoint, originToStart);
         cutPlaneNormal.Normalize(); // not strictly needed but might help us with stability
-        for (int i = 0; i < 2; i++)
-        {
-            Vector3 anchorPoint = anchorPoints[i];
-            Vector3 originToAnchor = anchorPoint - cameraPosition;
-            Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
-            anchorNormal.Normalize();
-            anchorBoundNormals[i] = anchorNormal;
-        }
 
         // now we assign vertices to a side or out of bounds
         // if there are out of bounds verts on both sides refuse to cut I think
@@ -60,57 +52,13 @@ public class Sliceable : MonoBehaviour
         var mesh = meshFilter.sharedMesh;
         Vector3[] vertices = mesh.vertices;
         Dictionary<int, float> signedVertDistAlongCutNormal = new Dictionary<int, float>();
-        bool topSideAllInBounds = true;
-        bool bottomSideAllInBounds = true;
         for (var i = 0; i < vertices.Length; i++)
         {
             Vector3 vert = vertices[i];
             // figure out which side of the cut plane we are on
             Vector3 vertFromStart = vert - startPoint;
             float signedDistanceAlongCutNormal = Vector3.Dot(vertFromStart, cutPlaneNormal);
-            bool isTop = signedDistanceAlongCutNormal < 0;
-            // then do a bounds check
-            bool isInBounds = true;
-            for (int j = 0; j < 2; j++)
-            {
-                // Note at least one of these is redundant
-                Vector3 vertFromAnchorPoint = vert - anchorPoints[j];
-                float signedDistanceAlongBoundNormal = Vector3.Dot(vertFromAnchorPoint, anchorBoundNormals[j]);
-                // Note I'm totally guessing about the side of the bounds
-                // Worst case we just check the middle but I think we can vibe it
-                if (signedDistanceAlongBoundNormal < 0)
-                {
-                    isInBounds = false;
-                    break;
-                }
-            }
             signedVertDistAlongCutNormal.Add(i, signedDistanceAlongCutNormal);
-            if (isTop)
-            {
-                if (!isInBounds)
-                {
-                    topSideAllInBounds = false;
-                }
-            }
-            else
-            {
-                if (!isInBounds)
-                {
-                    bottomSideAllInBounds = false;
-                }
-            }
-        }
-
-        /*if (vertsAboveByIdx.Count > 0 && vertsBelowByIdx.Count > 0)
-        {
-            Debug.Log("all verts on one side cannot cut polyhedra");
-            return;
-        }*/
-        // maybe not totally sufficient
-        if (!bottomSideAllInBounds && !topSideAllInBounds)
-        {
-            Debug.Log("both top and bottom are out of bounds polyheadra cannot be cut");
-            return;
         }
 
         // cut the mesh
@@ -195,6 +143,8 @@ public class Sliceable : MonoBehaviour
 
             // deal with the 1 vert case first
             // creates one new triangle
+            // TODO if we are smarter I think we can roll this and the second case together
+            // using the technique from the second case
             {
                 var smallPartitionVerts = paritionMeshVerts[smallerSubsetPartitionIdx];
                 var smallPartitionNormals = paritionMeshNormals[smallerSubsetPartitionIdx];
@@ -313,6 +263,49 @@ public class Sliceable : MonoBehaviour
                 partitionTriangles.Add(quadVertIndexes[2]);
                 partitionTriangles.Add(quadVertIndexes[3]);
             }
+        }
+
+        // once we establish the cuts we can figure out if they are full cuts or not
+        // for a convex mesh at least one of the cuts must fully lie inside the anchor bounds
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 anchorPoint = anchorPoints[i];
+            Vector3 originToAnchor = anchorPoint - cameraPosition;
+            Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
+            anchorNormal.Normalize();
+            anchorBoundNormals[i] = anchorNormal;
+        }
+
+        bool atLeastOneParitionInBounds = false;
+        for (int partitionIdx = 0; partitionIdx < 2; partitionIdx++)
+        {
+            var allPartitionVertsInBounds = true;
+            var partitionVerts = paritionMeshVerts[partitionIdx];
+            foreach (var vert in partitionVerts)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    var vertCenteredOnStart = vert - anchorPoints[i];
+                    // anchor normals point inwards
+                    float signedProj = Vector3.Dot(vertCenteredOnStart, anchorBoundNormals[i]);
+                    if (signedProj < 0)
+                    {
+                        allPartitionVertsInBounds = false;
+                        break;
+                    }
+                }
+                if (allPartitionVertsInBounds == false)
+                {
+                    break;
+                }
+            }
+            atLeastOneParitionInBounds |= allPartitionVertsInBounds;
+        }
+
+        if (!atLeastOneParitionInBounds)
+        {
+            Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
+            return;
         }
 
         Mesh topMesh = new Mesh()
