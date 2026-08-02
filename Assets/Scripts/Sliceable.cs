@@ -1,24 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
 public class Sliceable : MonoBehaviour
 {
+    public GameObject SliceablePrefab;
     public void Awake()
     {
         var meshFilter = GetComponent<MeshFilter>();
         var meshCollider = GetComponent<MeshCollider>();
         if (meshFilter.sharedMesh != meshCollider.sharedMesh)
         {
-            throw new System.Exception("meshFilter sharedMesh does not equal meshCollider sharedMesh");
+            throw new Exception("meshFilter sharedMesh does not equal meshCollider sharedMesh");
         }
         if (!meshCollider.convex)
         {
-            throw new System.Exception("mesh must be convex (the note collider being convex is just a proxy for this)");
+            throw new Exception("mesh must be convex (the note collider being convex is just a proxy for this)");
         }
     }
 
@@ -57,6 +56,7 @@ public class Sliceable : MonoBehaviour
         // assuming the mesh is convex then that means the cut wasn't all the way through?
 
         var meshFilter = GetComponent<MeshFilter>();
+        var meshCollider = GetComponent<MeshCollider>();
         var mesh = meshFilter.sharedMesh;
         Vector3[] vertices = mesh.vertices;
         Dictionary<int, float> signedVertDistAlongCutNormal = new Dictionary<int, float>();
@@ -208,10 +208,15 @@ public class Sliceable : MonoBehaviour
                 var edgeStartNormal = mesh.normals[edgeStartIdx];
 
                 // this is a direct vert mapping
-                smallPartitionVerts.Add(edgeStartVert);
-                smallPartitionNormals.Add(edgeStartNormal);
-                smallVertMappingForTri.Add(edgeStartIdx, smallPartitionVerts.Count - 1);
-                sameSideVertMapping.Add(edgeStartIdx, smallPartitionVerts.Count - 1);
+                if (!sameSideVertMapping.ContainsKey(edgeStartIdx))
+                {
+                    smallPartitionVerts.Add(edgeStartVert);
+                    smallPartitionNormals.Add(edgeStartNormal);
+                    sameSideVertMapping.Add(edgeStartIdx, smallPartitionVerts.Count - 1);
+                }
+                int edgeStartMappedIdx = sameSideVertMapping[edgeStartIdx];
+                smallVertMappingForTri.Add(edgeStartIdx, edgeStartMappedIdx);
+
 
                 // figure out the projected verts
                 foreach (var edgeEndIdx in triVertsLargerSubset)
@@ -289,10 +294,15 @@ public class Sliceable : MonoBehaviour
                     // add the same side verts to the direct mapping
                     if (triVertsLargerSubset.Contains(currVertexIdx))
                     {
-                        largePartitionVerts.Add(currVertex);
-                        largePartitionNormals.Add(currNormal);
-                        sameSideVertMapping.Add(currVertexIdx, largePartitionVerts.Count - 1);
-                        quadVertIndexes.Add(largePartitionVerts.Count - 1);
+                        // this is a direct vert mapping
+                        if (!sameSideVertMapping.ContainsKey(currVertexIdx))
+                        {
+                            largePartitionVerts.Add(currVertex);
+                            largePartitionNormals.Add(currNormal);
+                            sameSideVertMapping.Add(currVertexIdx, largePartitionVerts.Count - 1);
+                        }
+                        var currVertexMappedIdx = sameSideVertMapping[currVertexIdx];
+                        quadVertIndexes.Add(currVertexMappedIdx);
                     }
                 }
                 partitionTriangles.Add(quadVertIndexes[0]);
@@ -303,15 +313,30 @@ public class Sliceable : MonoBehaviour
                 partitionTriangles.Add(quadVertIndexes[2]);
                 partitionTriangles.Add(quadVertIndexes[3]);
             }
-
-            Mesh topMesh = new Mesh()
-            {
-                vertices = paritionMeshVerts[TOP_PARTION_IDX].ToArray(),
-                normals = paritionMeshNormals[TOP_PARTION_IDX].ToArray(),
-                triangles = paritionMeshTriangles[TOP_PARTION_IDX].ToArray(),
-            };
-            meshFilter.sharedMesh = topMesh;
         }
+
+        Mesh topMesh = new Mesh()
+        {
+            vertices = paritionMeshVerts[TOP_PARTION_IDX].ToArray(),
+            normals = paritionMeshNormals[TOP_PARTION_IDX].ToArray(),
+            triangles = paritionMeshTriangles[TOP_PARTION_IDX].ToArray(),
+        };
+        Mesh bottomMesh = new Mesh()
+        {
+            vertices = paritionMeshVerts[BOTTOM_PARTION_IDX].ToArray(),
+            normals = paritionMeshNormals[BOTTOM_PARTION_IDX].ToArray(),
+            triangles = paritionMeshTriangles[BOTTOM_PARTION_IDX].ToArray(),
+        };
+
+        meshFilter.sharedMesh = topMesh;
+        meshCollider.sharedMesh = topMesh;
+
+        var secondSliceable = Instantiate(SliceablePrefab, transform.parent);
+        secondSliceable.transform.localPosition = transform.localPosition;
+        secondSliceable.transform.localRotation = transform.localRotation;
+        secondSliceable.transform.localScale = transform.localScale;
+        secondSliceable.GetComponent<MeshFilter>().sharedMesh = bottomMesh;
+        secondSliceable.GetComponent<MeshCollider>().sharedMesh = bottomMesh;
     }
 
     private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane)
