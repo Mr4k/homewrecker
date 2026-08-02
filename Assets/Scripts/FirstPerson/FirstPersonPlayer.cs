@@ -84,6 +84,8 @@ public class FirstPersonPlayer : MonoBehaviour
         {
             _held = null;
         }
+        // TODO this line should be generalized with all other player tools 
+        // and let you select the active one
         GetComponent<CutTool>().ActiveToolUpdate(CameraTransform);
     }
 

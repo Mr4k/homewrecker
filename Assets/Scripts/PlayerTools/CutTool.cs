@@ -42,6 +42,13 @@ public class CutTool : MonoBehaviour
             else
             {
                 _clicking = false;
+                // cut logic
+                Debug.Log("cut");
+                // TODO obviously this needs to be improved
+                foreach (var slicable in FindObjectsByType<Sliceable>(FindObjectsSortMode.None))
+                {
+                    slicable.Slice(cameraTransform.position, _startCutPoint, _endCutPoint, 1000);
+                }
             }
         }
 

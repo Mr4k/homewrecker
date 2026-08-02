@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
 public class Sliceable : MonoBehaviour
@@ -26,6 +29,10 @@ public class Sliceable : MonoBehaviour
 
     public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange)
     {
+        cameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
+        startPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
+        endPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(endPoint);
+
         // construct the side bounds
         Vector3[] anchorBoundNormals = new Vector3[2];
         Vector3[] anchorPoints = new Vector3[]
@@ -40,7 +47,7 @@ public class Sliceable : MonoBehaviour
         {
             Vector3 anchorPoint = anchorPoints[i];
             Vector3 originToAnchor = anchorPoint - cameraPosition;
-            Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor);
+            Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
             anchorNormal.Normalize();
             anchorBoundNormals[i] = anchorNormal;
         }
@@ -67,11 +74,11 @@ public class Sliceable : MonoBehaviour
             for (int j = 0; j < 2; j++)
             {
                 // Note at least one of these is redundant
-                Vector3 vertFromAnchorPoint = vert - anchorPoints[i];
-                float signedDistanceAlongBoundNormal = Vector3.Dot(vertFromAnchorPoint, anchorBoundNormals[i]);
+                Vector3 vertFromAnchorPoint = vert - anchorPoints[j];
+                float signedDistanceAlongBoundNormal = Vector3.Dot(vertFromAnchorPoint, anchorBoundNormals[j]);
                 // Note I'm totally guessing about the side of the bounds
                 // Worst case we just check the middle but I think we can vibe it
-                if (signedDistanceAlongBoundNormal > 0)
+                if (signedDistanceAlongBoundNormal < 0)
                 {
                     isInBounds = false;
                     break;
@@ -137,9 +144,12 @@ public class Sliceable : MonoBehaviour
             int smallerSubsetPartitionIdx = TOP_PARTION_IDX;
             int largerSubsetParitionIdx = BOTTOM_PARTION_IDX;
 
+            // this code is mega inefficient at the cost of readability for now
+            List<int> fullTriangle = new List<int>();
             for (int j = 0; j < 3; j++)
             {
                 var vertIdx = mesh.triangles[3 * i + j];
+                fullTriangle.Add(vertIdx);
                 if (signedVertDistAlongCutNormal[vertIdx] > 0)
                 {
                     triVertsSmallerSubset.Add(vertIdx);
@@ -163,18 +173,151 @@ public class Sliceable : MonoBehaviour
                 // add the verts to the direct lookup table if they don't exist
                 // and create the new triangle
                 var partitionVerts = paritionMeshVerts[largerSubsetParitionIdx];
+                var partitionNormals = paritionMeshNormals[largerSubsetParitionIdx];
                 var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
-                foreach (var vertIdx in triVertsLargerSubset)
+                foreach (var vertIdx in fullTriangle)
                 {
                     if (!sameSideVertMapping.ContainsKey(vertIdx))
                     {
                         partitionVerts.Add(mesh.vertices[vertIdx]);
+                        partitionNormals.Add(mesh.normals[vertIdx]);
                         sameSideVertMapping.Add(vertIdx, partitionVerts.Count - 1);
                     }
                     partitionTriangles.Add(sameSideVertMapping[vertIdx]);
                 }
+                // we are done with this triangle
+                continue;
             }
+
+            // tough case we need to break the triangle apart
+            // there should be 2 verts on one side and 1 on the other
+
+            // deal with the 1 vert case first
+            // creates one new triangle
+            {
+                var smallPartitionVerts = paritionMeshVerts[smallerSubsetPartitionIdx];
+                var smallPartitionNormals = paritionMeshNormals[smallerSubsetPartitionIdx];
+
+                var sameSideVertMapping = sameSideDirectVertexMapping[smallerSubsetPartitionIdx];
+                var partitionTriangles = paritionMeshTriangles[smallerSubsetPartitionIdx];
+
+                Dictionary<int, int> smallVertMappingForTri = new Dictionary<int, int>();
+                var edgeStartIdx = triVertsSmallerSubset.ToList()[0];
+                var edgeStartVert = mesh.vertices[edgeStartIdx];
+                var edgeStartNormal = mesh.normals[edgeStartIdx];
+
+                // this is a direct vert mapping
+                smallPartitionVerts.Add(edgeStartVert);
+                smallPartitionNormals.Add(edgeStartNormal);
+                smallVertMappingForTri.Add(edgeStartIdx, smallPartitionVerts.Count - 1);
+                sameSideVertMapping.Add(edgeStartIdx, smallPartitionVerts.Count - 1);
+
+                // figure out the projected verts
+                foreach (var edgeEndIdx in triVertsLargerSubset)
+                {
+                    var edgeEndVert = mesh.vertices[edgeEndIdx];
+                    var edgeRayTorwardsPlane = edgeEndVert - edgeStartVert;
+
+                    var projectedVert = clampEdgeAtPlane(edgeStartVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[edgeStartIdx]);
+                    smallPartitionVerts.Add(projectedVert);
+                    // in a really sick implementation this would interpolate the normal along the edge
+                    // but for now I'm being lazy and assuming the normals will be consistent across the face
+                    var projectedNormal = mesh.normals[edgeEndIdx];
+                    smallPartitionNormals.Add(projectedNormal);
+
+                    smallVertMappingForTri.Add(edgeEndIdx, smallPartitionVerts.Count - 1);
+                }
+
+                foreach (var vertIdx in fullTriangle)
+                {
+                    partitionTriangles.Add(smallVertMappingForTri[vertIdx]);
+                }
+            }
+
+            // deal with the 2 vert case
+            // creates two new triangles
+            {
+                var largePartitionVerts = paritionMeshVerts[largerSubsetParitionIdx];
+                var largePartitionNormals = paritionMeshNormals[largerSubsetParitionIdx];
+
+                var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
+                var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
+
+                List<int> quadVertIndexes = new List<int>();
+
+                for (int j = 0; j < 3; j++)
+                {
+                    var prevVertexIdx = fullTriangle[(j - 1 + 3) % 3];
+                    var currVertexIdx = fullTriangle[j];
+                    var currVertex = mesh.vertices[currVertexIdx];
+                    var currNormal = mesh.normals[currVertexIdx];
+                    if (triVertsLargerSubset.Contains(currVertexIdx) && !triVertsLargerSubset.Contains(prevVertexIdx))
+                    {
+                        var prevVert = mesh.vertices[prevVertexIdx];
+                        var prevNormal = mesh.normals[prevVertexIdx];
+                        var edgeRayTorwardsPlane = prevVert - currVertex;
+                        // project the other side vert
+                        var projectedVert = clampEdgeAtPlane(currVertex, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[currVertexIdx]);
+                        largePartitionVerts.Add(projectedVert);
+                        // in a really sick implementation this would interpolate the normal along the edge
+                        // but for now I'm being lazy and assuming the normals will be consistent across the face
+                        var projectedNormal = prevNormal;
+                        largePartitionNormals.Add(projectedNormal);
+                        quadVertIndexes.Add(largePartitionVerts.Count - 1);
+                    }
+                    else if (!triVertsLargerSubset.Contains(currVertexIdx) && triVertsLargerSubset.Contains(prevVertexIdx))
+                    {
+                        var prevVert = mesh.vertices[prevVertexIdx];
+                        var prevNormal = mesh.normals[prevVertexIdx];
+                        var edgeRayTorwardsPlane = currVertex - prevVert;
+                        // project the other side vert
+                        var projectedVert = clampEdgeAtPlane(prevVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[prevVertexIdx]);
+                        largePartitionVerts.Add(projectedVert);
+                        // in a really sick implementation this would interpolate the normal along the edge
+                        // but for now I'm being lazy and assuming the normals will be consistent across the face
+                        var projectedNormal = currNormal;
+                        largePartitionNormals.Add(projectedNormal);
+                        quadVertIndexes.Add(largePartitionVerts.Count - 1);
+                    }
+                    else if (!triVertsLargerSubset.Contains(currVertexIdx) && !triVertsLargerSubset.Contains(prevVertexIdx))
+                    {
+                        throw new Exception("Could not decompose triangle");
+                    }
+
+                    // seperately
+                    // add the same side verts to the direct mapping
+                    if (triVertsLargerSubset.Contains(currVertexIdx))
+                    {
+                        largePartitionVerts.Add(currVertex);
+                        largePartitionNormals.Add(currNormal);
+                        sameSideVertMapping.Add(currVertexIdx, largePartitionVerts.Count - 1);
+                        quadVertIndexes.Add(largePartitionVerts.Count - 1);
+                    }
+                }
+                partitionTriangles.Add(quadVertIndexes[0]);
+                partitionTriangles.Add(quadVertIndexes[1]);
+                partitionTriangles.Add(quadVertIndexes[3]);
+
+                partitionTriangles.Add(quadVertIndexes[1]);
+                partitionTriangles.Add(quadVertIndexes[2]);
+                partitionTriangles.Add(quadVertIndexes[3]);
+            }
+
+            Mesh topMesh = new Mesh()
+            {
+                vertices = paritionMeshVerts[TOP_PARTION_IDX].ToArray(),
+                normals = paritionMeshNormals[TOP_PARTION_IDX].ToArray(),
+                triangles = paritionMeshTriangles[TOP_PARTION_IDX].ToArray(),
+            };
+            meshFilter.sharedMesh = topMesh;
         }
+    }
+
+    private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane)
+    {
+        var cosBetweenRayAndDown = Vector3.Dot(normalEdgeRayThroughPlane, planeNormal);
+        var amountToExtendRay = -signedStartShortestDistToPlane / cosBetweenRayAndDown;
+        return edgeStart + normalEdgeRayThroughPlane * amountToExtendRay;
     }
 }
