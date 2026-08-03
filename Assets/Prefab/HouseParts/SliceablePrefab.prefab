@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8814924060944508803}
   - component: {fileID: 659270139136985430}
   - component: {fileID: -2017177601536529181}
+  - component: {fileID: -7330584501351592630}
   m_Layer: 0
   m_Name: SliceablePrefab
   m_TagString: Untagged
@@ -152,6 +153,19 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 3
+--- !u!114 &-7330584501351592630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7541898946795491853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9410a9632a5d4ea49762439f9ffa925d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Draggable
+  HighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}

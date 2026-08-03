@@ -309,15 +309,15 @@ public class Sliceable : MonoBehaviour
             atLeastOneParitionInBounds |= allPartitionVertsInBounds;
         }
 
-        if (!atLeastOneParitionInBounds)
-        {
-            Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
-            return;
-        }
-
         if (partitionMeshVerts[BOTTOM_PARTION_IDX].Count == 0 || partitionMeshVerts[TOP_PARTION_IDX].Count == 0)
         {
             Debug.Log("cannot cut convex polyhedra everything is on a single side");
+            return;
+        }
+
+        if (!atLeastOneParitionInBounds)
+        {
+            Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
             return;
         }
 
@@ -398,6 +398,7 @@ public class Sliceable : MonoBehaviour
         secondSliceable.transform.localPosition = transform.localPosition;
         secondSliceable.transform.localRotation = transform.localRotation;
         secondSliceable.transform.localScale = transform.localScale;
+        Physics.SyncTransforms();
         secondSliceable.GetComponent<MeshFilter>().sharedMesh = bottomMesh;
         secondSliceable.GetComponent<MeshCollider>().sharedMesh = bottomMesh;
     }
