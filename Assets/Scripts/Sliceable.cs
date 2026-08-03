@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
@@ -68,18 +69,18 @@ public class Sliceable : MonoBehaviour
 
         const int TOP_PARTION_IDX = 0;
         const int BOTTOM_PARTION_IDX = 1;
-        List<Vector3>[] paritionMeshVerts = new List<Vector3>[2];
-        List<Vector3>[] paritionMeshNormals = new List<Vector3>[2];
-        List<int>[] paritionCapIndexes = new List<int>[2];
+        List<Vector3>[] partitionMeshVerts = new List<Vector3>[2];
+        List<Vector3>[] partitionMeshNormals = new List<Vector3>[2];
+        List<int>[] partitionCapIndexes = new List<int>[2];
         Dictionary<int, int>[] sameSideDirectVertexMapping = new Dictionary<int, int>[2];
         List<int>[] paritionMeshTriangles = new List<int>[2];
 
         for (int i = 0; i < 2; i++)
         {
-            paritionMeshVerts[i] = new List<Vector3>();
-            paritionMeshNormals[i] = new List<Vector3>();
+            partitionMeshVerts[i] = new List<Vector3>();
+            partitionMeshNormals[i] = new List<Vector3>();
             paritionMeshTriangles[i] = new List<int>();
-            paritionCapIndexes[i] = new List<int>();
+            partitionCapIndexes[i] = new List<int>();
             sameSideDirectVertexMapping[i] = new Dictionary<int, int>();
         }
 
@@ -122,8 +123,8 @@ public class Sliceable : MonoBehaviour
                 // ez case
                 // add the verts to the direct lookup table if they don't exist
                 // and create the new triangle
-                var partitionVerts = paritionMeshVerts[largerSubsetParitionIdx];
-                var partitionNormals = paritionMeshNormals[largerSubsetParitionIdx];
+                var partitionVerts = partitionMeshVerts[largerSubsetParitionIdx];
+                var partitionNormals = partitionMeshNormals[largerSubsetParitionIdx];
                 var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
                 foreach (var vertIdx in fullTriangle)
@@ -148,12 +149,12 @@ public class Sliceable : MonoBehaviour
             // TODO if we are smarter I think we can roll this and the second case together
             // using the technique from the second case
             {
-                var smallPartitionVerts = paritionMeshVerts[smallerSubsetPartitionIdx];
-                var smallPartitionNormals = paritionMeshNormals[smallerSubsetPartitionIdx];
+                var smallPartitionVerts = partitionMeshVerts[smallerSubsetPartitionIdx];
+                var smallPartitionNormals = partitionMeshNormals[smallerSubsetPartitionIdx];
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[smallerSubsetPartitionIdx];
                 var partitionTriangles = paritionMeshTriangles[smallerSubsetPartitionIdx];
-                var partitionCaps = paritionCapIndexes[smallerSubsetPartitionIdx];
+                var partitionCaps = partitionCapIndexes[smallerSubsetPartitionIdx];
 
                 Dictionary<int, int> smallVertMappingForTri = new Dictionary<int, int>();
                 var edgeStartIdx = triVertsSmallerSubset.ToList()[0];
@@ -197,12 +198,12 @@ public class Sliceable : MonoBehaviour
             // deal with the 2 vert case
             // creates two new triangles
             {
-                var largePartitionVerts = paritionMeshVerts[largerSubsetParitionIdx];
-                var largePartitionNormals = paritionMeshNormals[largerSubsetParitionIdx];
+                var largePartitionVerts = partitionMeshVerts[largerSubsetParitionIdx];
+                var largePartitionNormals = partitionMeshNormals[largerSubsetParitionIdx];
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
                 var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
-                var partitionCaps = paritionCapIndexes[largerSubsetParitionIdx];
+                var partitionCaps = partitionCapIndexes[largerSubsetParitionIdx];
 
                 List<int> quadVertIndexes = new List<int>();
 
@@ -286,7 +287,7 @@ public class Sliceable : MonoBehaviour
         for (int partitionIdx = 0; partitionIdx < 2; partitionIdx++)
         {
             var allPartitionVertsInBounds = true;
-            var partitionVerts = paritionMeshVerts[partitionIdx];
+            var partitionVerts = partitionMeshVerts[partitionIdx];
             foreach (var vert in partitionVerts)
             {
                 for (int i = 0; i < 2; i++)
@@ -314,45 +315,79 @@ public class Sliceable : MonoBehaviour
             return;
         }
 
+        if (partitionMeshVerts[BOTTOM_PARTION_IDX].Count == 0 || partitionMeshVerts[TOP_PARTION_IDX].Count == 0)
+        {
+            Debug.Log("cannot cut convex polyhedra everything is on a single side");
+            return;
+        }
+
         // fill holes
         // note we rely heavily on this mesh being convex
         for (int partitionIdx = 0; partitionIdx < 2; partitionIdx++)
         {
-            var partitionVerts = paritionMeshVerts[partitionIdx];
-            var capBoundIndexes = paritionCapIndexes[partitionIdx];
+            var normalScalar = partitionIdx == TOP_PARTION_IDX ? 1 : -1;
+            var partitionVerts = partitionMeshVerts[partitionIdx];
+            var partitionNormals = partitionMeshNormals[partitionIdx];
+            var capBoundIndexes = partitionCapIndexes[partitionIdx];
             if (capBoundIndexes.Count < 1)
             {
                 Debug.Log("no cap bound verts in partition. This is odd");
                 continue;
             }
+
+            List<int> dupeCapIndexes = new List<int>();
             Vector3 center = Vector3.zero;
             foreach (var capBoundIdx in capBoundIndexes)
             {
                 Vector3 vert = partitionVerts[capBoundIdx];
                 center += vert;
-            }
-            center /= capBoundIndexes.Count;
-            int firstIdx = capBoundIndexes[0];
-            Vector3 firstVert = partitionVerts[firstIdx];
-            Vector3 centerToFirst = (firstVert - center).normalized;
-            capBoundIndexes.Sort((a, b) =>
-            {
-                Vector3 aVert = partitionVerts[a];
-                Vector3 bVert = partitionVerts[b];
 
+                partitionVerts.Add(vert);
+                partitionNormals.Add(cutPlaneNormal * -normalScalar);
+                dupeCapIndexes.Add(partitionVerts.Count - 1);
+            }
+            center /= dupeCapIndexes.Count;
+            int firstIdx = dupeCapIndexes[0];
+            Vector3 firstVert = partitionVerts[firstIdx];
+            Vector3 xAxis = (firstVert - center).normalized;
+            Vector3 yAxis = Vector3.Cross(xAxis, cutPlaneNormal * normalScalar);
+            dupeCapIndexes.Sort((a, b) =>
+            {
+                Vector3 centeredAVert = partitionVerts[a] - center;
+                Vector3 centeredBVert = partitionVerts[b] - center;
+                float aX = Vector3.Dot(centeredAVert, xAxis);
+                float aY = Vector3.Dot(centeredAVert, yAxis);
+                double aAngle = Math.Atan2(aY, aX);
+                float bX = Vector3.Dot(centeredBVert, xAxis);
+                float bY = Vector3.Dot(centeredBVert, yAxis);
+                double bAngle = Math.Atan2(bY, bX);
+                return aAngle.CompareTo(bAngle);
             });
+
+            partitionVerts.Add(center);
+            partitionNormals.Add(cutPlaneNormal * -normalScalar);
+            int centerIdx = partitionVerts.Count - 1;
+            var partitionTriangles = paritionMeshTriangles[partitionIdx];
+            for (int i = 0; i < dupeCapIndexes.Count; i++)
+            {
+                int currIdx = dupeCapIndexes[i];
+                int nextIdx = dupeCapIndexes[(i + 1) % dupeCapIndexes.Count];
+                partitionTriangles.Add(currIdx);
+                partitionTriangles.Add(nextIdx);
+                partitionTriangles.Add(centerIdx);
+            }
         }
 
         Mesh topMesh = new Mesh()
         {
-            vertices = paritionMeshVerts[TOP_PARTION_IDX].ToArray(),
-            normals = paritionMeshNormals[TOP_PARTION_IDX].ToArray(),
+            vertices = partitionMeshVerts[TOP_PARTION_IDX].ToArray(),
+            normals = partitionMeshNormals[TOP_PARTION_IDX].ToArray(),
             triangles = paritionMeshTriangles[TOP_PARTION_IDX].ToArray(),
         };
         Mesh bottomMesh = new Mesh()
         {
-            vertices = paritionMeshVerts[BOTTOM_PARTION_IDX].ToArray(),
-            normals = paritionMeshNormals[BOTTOM_PARTION_IDX].ToArray(),
+            vertices = partitionMeshVerts[BOTTOM_PARTION_IDX].ToArray(),
+            normals = partitionMeshNormals[BOTTOM_PARTION_IDX].ToArray(),
             triangles = paritionMeshTriangles[BOTTOM_PARTION_IDX].ToArray(),
         };
 
