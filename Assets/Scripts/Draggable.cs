@@ -9,6 +9,7 @@ public class Draggable : MonoBehaviour
     private Rigidbody _rigidbody;
     private Renderer _renderer;
     private Color _baseColor;
+    private bool _dragged;
 
     private void Awake()
     {
@@ -21,6 +22,18 @@ public class Draggable : MonoBehaviour
     {
 
     }
+
+    public virtual void BeginDrag()
+    {
+        _dragged = true;
+    }
+
+    public virtual void EndDrag()
+    {
+        _dragged = false;
+    }
+
+    public virtual void OnDrag(Vector3 dragDirection) { }
 
     private void FixedUpdate()
     {

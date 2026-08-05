@@ -54,6 +54,7 @@ public class FirstPersonPlayer : MonoBehaviour
                     var draggable = hit.rigidbody.GetComponent<Draggable>();
                     _held = draggable;
                     _heldGrabPoint = _held.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
+                    _held.BeginDrag();
                 }
             }
             else if (hit.collider && hit.collider.GetComponent<Smashable>())
@@ -82,6 +83,7 @@ public class FirstPersonPlayer : MonoBehaviour
         }
         if (_held != null && !Input.GetMouseButton(0))
         {
+            _held.EndDrag();
             _held = null;
         }
         // TODO this line should be generalized with all other player tools 
@@ -105,6 +107,7 @@ public class FirstPersonPlayer : MonoBehaviour
             // to combat surfing maybe we just make it so that you cannot pull something inside yourself
             _held.Rigidbody.AddForceAtPosition(normalizedForce * magForce * fixedDeltaTimeMul, heldGrabPointWorld);
             _held.Rigidbody.AddTorque(-_held.Rigidbody.angularVelocity * 0.1f * fixedDeltaTimeMul);
+            _held.OnDrag(normalizedForce);
         }
     }
 }
