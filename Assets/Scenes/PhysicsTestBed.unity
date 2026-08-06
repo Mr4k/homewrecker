@@ -10005,13 +10005,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wheel
   parent: {fileID: 1784293436}
-  radius: 0.3
+  radius: 0.15
   maxSuspension: 0
-  spring: 100
-  damper: 10
+  spring: 200
+  damper: 120
   skidFriction: 0.9
   suspensionOffset: 0.05
   pullDirection: {x: 0, y: 0, z: 0}
+  dragged: 0
 --- !u!1 &109547518
 GameObject:
   m_ObjectHideFlags: 0
@@ -120411,13 +120412,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wheel
   parent: {fileID: 1784293436}
-  radius: 0.3
+  radius: 0.15
   maxSuspension: 0
-  spring: 100
-  damper: 10
+  spring: 200
+  damper: 120
   skidFriction: 0.9
   suspensionOffset: 0.05
   pullDirection: {x: 0, y: 0, z: 0}
+  dragged: 0
 --- !u!1 &1561545208
 GameObject:
   m_ObjectHideFlags: 0
@@ -136152,13 +136154,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wheel
   parent: {fileID: 1784293436}
-  radius: 0.3
+  radius: 0.15
   maxSuspension: 0
-  spring: 100
-  damper: 10
+  spring: 200
+  damper: 120
   skidFriction: 0.9
   suspensionOffset: 0.05
   pullDirection: {x: 0, y: 0, z: 0}
+  dragged: 0
 --- !u!1 &1747262872
 GameObject:
   m_ObjectHideFlags: 0
@@ -139928,7 +139931,7 @@ Rigidbody:
   m_Mass: 10
   m_LinearDamping: 1
   m_AngularDamping: 1
-  m_CenterOfMass: {x: 0, y: -0.8, z: 0}
+  m_CenterOfMass: {x: 0, y: -0.6, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
   m_IncludeLayers:
@@ -157395,13 +157398,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wheel
   parent: {fileID: 1784293436}
-  radius: 0.3
+  radius: 0.15
   maxSuspension: 0
-  spring: 100
-  damper: 10
+  spring: 200
+  damper: 120
   skidFriction: 0.9
   suspensionOffset: 0.05
   pullDirection: {x: 0, y: 0, z: 0}
+  dragged: 0
 --- !u!1 &1997006506
 GameObject:
   m_ObjectHideFlags: 0

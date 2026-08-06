@@ -19,11 +19,14 @@ public class Wheel : MonoBehaviour
     public bool dragged = false;
     public void FixedUpdate()
     {
-        Vector3 downwards = transform.TransformDirection(-Vector3.up);
+        Vector3 localDownward = transform.TransformDirection(-Vector3.up);
+        Vector3 downwards = -Vector3.up;
         //Vector3 downwards = -Vector3.up;
         RaycastHit hit;
+        float distFactor = Math.Max(Vector3.Dot(localDownward, downwards) - 0.75f, 0) / 0.25f;
+        float distanceToCast = (radius + maxSuspension) * distFactor;
 
-        if (Physics.Raycast(transform.position, downwards, out hit, radius + maxSuspension))
+        if (Physics.Raycast(transform.position, downwards, out hit, distanceToCast))
         {
             // the velocity at point of contact
             Vector3 velocityAtTouch = parent.GetPointVelocity(hit.point);
@@ -45,7 +48,7 @@ public class Wheel : MonoBehaviour
             // back to world space * -damping
             Vector3 damping = transform.TransformDirection(t) * -damper;
 
-            Vector3 frictionForce = Vector3.zero;
+            Vector3 frictionForce;
             if (dragged)
             {
                 Vector3 skidAxis = Vector3.Cross(-downwards, pullDirection).normalized;
