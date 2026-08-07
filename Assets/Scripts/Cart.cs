@@ -9,7 +9,8 @@ public class Cart : Draggable
 
     public bool ShouldStablize = true;
 
-    public float UprightSpringConstant = 1.0f;
+    public float SmallUprightStabilizationSpring = 20f;
+    public float BigUprightSpringConstant = 100f;
 
     public float maxRotAnglePerSec = 1.0f;
 
@@ -48,13 +49,11 @@ public class Cart : Draggable
 
     public virtual void FixedUpdate()
     {
+        var body = GetComponent<Rigidbody>();
+        // body.AddTorque(Vector3.Cross(transform.up, Vector3.up) * SmallUprightStabilizationSpring);
         if (ShouldStablize)
         {
-            var body = GetComponent<Rigidbody>();
-            var targetRot = Quaternion.FromToRotation(this.transform.up, Vector3.up) * this.transform.rotation;
-            var currRot = Quaternion.Slerp(this.transform.rotation, targetRot, 0.1f);
-            //var dst = 1.0f - Math.Max(Vector3.Dot(Vector3.up, transform.up), 0);
-            body.MoveRotation(currRot);
+            body.AddTorque(Vector3.Cross(transform.up, Vector3.up) * BigUprightSpringConstant);
         }
     }
 }
