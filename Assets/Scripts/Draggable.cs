@@ -35,11 +35,6 @@ public class Draggable : MonoBehaviour
 
     public virtual void OnDrag(Vector3 dragDirection) { }
 
-    private void FixedUpdate()
-    {
-
-    }
-
     private void SetHighlight(bool on)
     {
         _renderer.material.color = on ? HighlightColor : _baseColor;

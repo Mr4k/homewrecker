@@ -10010,7 +10010,7 @@ MonoBehaviour:
   spring: 600
   damper: 120
   skidFriction: 0.9
-  suspensionOffset: 0.01
+  suspensionOffset: 0.005
   pullDirection: {x: 0, y: 0, z: 0}
   dragged: 0
 --- !u!1 &109547518
@@ -120417,7 +120417,7 @@ MonoBehaviour:
   spring: 600
   damper: 120
   skidFriction: 0.9
-  suspensionOffset: 0.01
+  suspensionOffset: 0.005
   pullDirection: {x: 0, y: 0, z: 0}
   dragged: 0
 --- !u!1 &1561545208
@@ -136159,7 +136159,7 @@ MonoBehaviour:
   spring: 600
   damper: 120
   skidFriction: 0.9
-  suspensionOffset: 0.01
+  suspensionOffset: 0.005
   pullDirection: {x: 0, y: 0, z: 0}
   dragged: 0
 --- !u!1 &1747262872
@@ -139983,6 +139983,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Cart
   HighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  ShouldStablize: 1
+  UprightSpringConstant: 0.8
 --- !u!1 &1785278279
 GameObject:
   m_ObjectHideFlags: 0
@@ -157403,7 +157405,7 @@ MonoBehaviour:
   spring: 600
   damper: 120
   skidFriction: 0.9
-  suspensionOffset: 0.01
+  suspensionOffset: 0.005
   pullDirection: {x: 0, y: 0, z: 0}
   dragged: 0
 --- !u!1 &1997006506
