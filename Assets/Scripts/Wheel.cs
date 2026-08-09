@@ -26,7 +26,17 @@ public class Wheel : MonoBehaviour
         float distFactor = Math.Max(Vector3.Dot(localDownward, downwards) - 0.75f, 0) / 0.25f;
         float distanceToCast = (radius + maxSuspension) * distFactor;
 
-        if (Physics.SphereCast(transform.position, 0.001f, downwards, out hit, distanceToCast))
+        var collider = GetComponent<Collider>();
+        if (dragged)
+        {
+            collider.enabled = false;
+        }
+        else
+        {
+            collider.enabled = true;
+        }
+
+        if (dragged && Physics.SphereCast(transform.position, 0.001f, downwards, out hit, distanceToCast))
         {
             // the velocity at point of contact
             Vector3 velocityAtTouch = parent.GetPointVelocity(hit.point);
