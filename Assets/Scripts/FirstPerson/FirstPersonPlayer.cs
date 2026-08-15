@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;
 
+[RequireComponent(typeof(HandTool))]
 public class FirstPersonPlayer : MonoBehaviour
 {
     public FirstPersonCharacterController Character;
@@ -11,18 +11,17 @@ public class FirstPersonPlayer : MonoBehaviour
     public float LookSensitivity = 2f;
     private float _pitch;
 
-    // for grabber
-    public float GrabRange = 5f;
-    public Transform PullTarget;
-    public float PullForce = 60f;
-    public float StablizerTorque = 10f;
-    public float Damping = 8f;
-    public Draggable _held;
-    public Vector3 _heldGrabPoint;
+    public List<BaseTool> tools = new List<BaseTool>();
+    private int activeToolIndex = 0;
+
+    public TextMeshProUGUI ToolNameText;
 
     private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        tools.Add(GetComponent<HandTool>());
+        tools.Add(GetComponent<CutTool>());
+        tools.Add(GetComponent<SmashTool>());
     }
 
     private void Update()
@@ -45,69 +44,29 @@ public class FirstPersonPlayer : MonoBehaviour
         _pitch = Mathf.Clamp(_pitch - look.y, -89f, 89f);
         CameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
-        if (_held == null && Physics.Raycast(CameraTransform.position, CameraTransform.forward, out RaycastHit hit, GrabRange))
+        activeToolIndex = activeToolIndex % tools.Count;
+        tools[activeToolIndex].ActiveToolUpdate(CameraTransform);
+
+        ToolNameText.text = tools[activeToolIndex].GetName();
+
+        if (Input.GetKeyDown(KeyCode.Q))
         {
-            if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())
+            activeToolIndex -= 1;
+            if (activeToolIndex < 0)
             {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    var draggable = hit.rigidbody.GetComponent<Draggable>();
-                    _held = draggable;
-                    _heldGrabPoint = _held.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
-                    _held.BeginDrag();
-                }
-            }
-            else if (hit.collider && hit.collider.GetComponent<Smashable>())
-            {
-                var smashableGroupObjects = new List<Smashable>();
-                var smashable = hit.collider.GetComponent<Smashable>();
-                smashableGroupObjects.Add(smashable);
-                var colliders = Physics.OverlapSphere(hit.point, 0.25f);
-                foreach (var col in colliders)
-                {
-                    var otherSmashable = col.gameObject.GetComponent<Smashable>();
-                    if (otherSmashable != null && otherSmashable != smashable && otherSmashable.SharesGroup(smashable))
-                    {
-                        smashableGroupObjects.Add(otherSmashable);
-                    }
-                }
-                if (Input.GetMouseButtonDown(0))
-                {
-                    Debug.Log("smashhhed!");
-                    foreach (var s in smashableGroupObjects)
-                    {
-                        s.Smash(CameraTransform.position, 400);
-                    }
-                }
+                activeToolIndex += tools.Count;
             }
         }
-        if (_held != null && !Input.GetMouseButton(0))
+        if (Input.GetKeyDown(KeyCode.E))
         {
-            _held.EndDrag();
-            _held = null;
+            activeToolIndex += 1;
+            activeToolIndex = activeToolIndex % tools.Count;
         }
-        // TODO this line should be generalized with all other player tools 
-        // and let you select the active one
-        GetComponent<CutTool>().ActiveToolUpdate(CameraTransform);
     }
 
     private void FixedUpdate()
     {
-        float fixedDeltaTimeMul = Time.fixedDeltaTime * 60;
-        if (_held != null)
-        {
-            var heldGrabPointWorld = _held.transform.localToWorldMatrix.MultiplyPoint(_heldGrabPoint);
-            var targetDisplacement = PullTarget.position - heldGrabPointWorld;
-            var relativeVelocity = _held.Rigidbody.linearVelocity - Character.Motor.Velocity;
-            var force = targetDisplacement * 100 - relativeVelocity * 10;
-            var normalizedForce = force.normalized;
-            var magForce = force.magnitude;
-            magForce = Math.Min(magForce, PullForce);
-            // note that surfing is a bug. Should we keep it? Could be fun
-            // to combat surfing maybe we just make it so that you cannot pull something inside yourself
-            _held.Rigidbody.AddForceAtPosition(normalizedForce * magForce * fixedDeltaTimeMul, heldGrabPointWorld);
-            _held.Rigidbody.AddTorque(-_held.Rigidbody.angularVelocity * 0.1f * fixedDeltaTimeMul);
-            _held.OnDrag(normalizedForce);
-        }
+        activeToolIndex = activeToolIndex % tools.Count;
+        tools[activeToolIndex].ActiveToolFixedUpdate(Character);
     }
 }

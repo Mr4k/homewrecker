@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
-public class CutTool : MonoBehaviour
+public class CutTool : BaseTool
 {
     private Vector3 _startCutPoint;
     private Vector3 _endCutPoint;
@@ -9,7 +9,7 @@ public class CutTool : MonoBehaviour
 
     public float MaxCutRange;
 
-    public void ActiveToolUpdate(Transform cameraTransform)
+    public override void ActiveToolUpdate(Transform cameraTransform)
     {
         LineRenderer _lineRenderer = GetComponent<LineRenderer>();
         if (!_clicking)
@@ -63,5 +63,10 @@ public class CutTool : MonoBehaviour
             _lineRenderer.SetPositions(new Vector3[] { });
             _lineRenderer.positionCount = 0;
         }
+    }
+
+    public override string GetName()
+    {
+        return "Cut Tool";
     }
 }

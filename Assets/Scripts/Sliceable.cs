@@ -22,11 +22,6 @@ public class Sliceable : MonoBehaviour
         }
     }
 
-    private void ParitionVerticies()
-    {
-
-    }
-
     public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange)
     {
         cameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
