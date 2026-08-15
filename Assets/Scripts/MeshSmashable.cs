@@ -7,7 +7,7 @@ public class MeshSmashable : Smashable
     {
         var debrisGameObject = new GameObject
         {
-            name = "MeshDebris" + UnityEngine.Random.Range(0, 100)
+            name = "MeshDebris"
         };
         debrisGameObject.transform.SetParent(transform.parent, false);
         var debris = debrisGameObject.AddComponent<Rigidbody>();

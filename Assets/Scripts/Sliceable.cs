@@ -401,6 +401,25 @@ public class Sliceable : MonoBehaviour
         Physics.SyncTransforms();
         secondSliceable.GetComponent<MeshFilter>().sharedMesh = bottomMesh;
         secondSliceable.GetComponent<MeshCollider>().sharedMesh = bottomMesh;
+
+        // handle screwables
+        var screwableBody = GetComponent<ScrewableBody>();
+        if (screwableBody != null && screwableBody.AttachedScrews.Count > 0)
+        {
+            var secondScrewableBody = secondSliceable.AddComponent<ScrewableBody>();
+            // divide the screws
+            // we use a clone here so we can modify in place when screws detach
+            foreach (var screw in screwableBody.AttachedScrews.ToList())
+            {
+                var localScrewPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(screw.transform.position);
+                var side = Vector3.Dot(localScrewPosition - startPoint, cutPlaneNormal);
+                if (side <= 0)
+                {
+                    // in this case we are on the bottom mesh and need to reassign
+                    screw.SwapAttachedBody(screwableBody, secondScrewableBody);
+                }
+            }
+        }
     }
 
     private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane)
