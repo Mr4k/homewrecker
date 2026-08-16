@@ -19,9 +19,7 @@ public class FirstPersonPlayer : MonoBehaviour
     private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
-        tools.Add(GetComponent<HandTool>());
-        tools.Add(GetComponent<CutTool>());
-        tools.Add(GetComponent<SmashTool>());
+        tools.AddRange(GetComponents<BaseTool>());
     }
 
     private void Update()

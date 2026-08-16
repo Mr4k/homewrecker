@@ -17,10 +17,13 @@ public class Screw : MonoBehaviour
         AttachedBody.AttachedScrews.Add(this);
     }
 
-    public void UnScrew()
+    public void Unscrew()
     {
+        ScrewJoint.enableCollision = true;
+        Destroy(ScrewJoint);
         ParentBody.AttachedScrews.Remove(this);
         AttachedBody.AttachedScrews.Remove(this);
+        Destroy(gameObject);
     }
 
     public void SwapAttachedBody(ScrewableBody oldBody, ScrewableBody newBody)
@@ -32,9 +35,10 @@ public class Screw : MonoBehaviour
 
             ParentBody = newBody;
 
-            this.transform.parent = ParentBody.transform;
+            this.transform.SetParent(ParentBody.transform, true);
             ParentBody.AttachedScrews.Add(this);
             ScrewJoint = ParentBody.AddComponent<FixedJoint>();
+            ScrewJoint.enableCollision = true;
             ScrewJoint.connectedBody = AttachedBody.GetRigidbody();
         }
         else if (oldBody == AttachedBody)
