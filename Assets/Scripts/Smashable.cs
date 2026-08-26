@@ -25,16 +25,6 @@ public class Smashable : MonoBehaviour
         _baseColor = _renderer.material.color;
     }
 
-    private void Update()
-    {
-
-    }
-
-    private void FixedUpdate()
-    {
-
-    }
-
     public virtual void Smash(Vector3 originPoint, float smashForce)
     {
         var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation, transform.parent);

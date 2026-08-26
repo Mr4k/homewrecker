@@ -1,3 +1,4 @@
+using Unity.Mathematics;
 using UnityEngine;
 
 public class ScrewBlueprint : BaseBlueprint
@@ -35,7 +36,7 @@ public class ScrewBlueprint : BaseBlueprint
     void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(transform.position, GizmoDisplayRadius);
+        Gizmos.DrawSphere(transform.position, ScrewDiameter / 2.0f);
         Gizmos.color = Color.red;
         Gizmos.DrawRay(transform.position, transform.forward * ScrewLength);
     }
