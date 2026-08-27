@@ -144,7 +144,10 @@ class FloorBaseLayerBlueprint : BaseBlueprint
         {
             return a.transform.localPosition.x.CompareTo(b.transform.localPosition.x);
         });
-
+        for (int i = 0; i < supportBeamsInOrder.Count; i++)
+        {
+            supportBeamsInOrder[i].gameObject.name = "beam_" + i;
+        }
 
         // floorboards
         float nextY = -FloorSize.y / 2;
@@ -170,8 +173,8 @@ class FloorBaseLayerBlueprint : BaseBlueprint
                 halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
                 nextX += FloorboardWidth / 2 + rowSpacerWidth;
                 numHorizontalFloorboards -= 1;
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, true);
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 1], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 1], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, true);
                 currSupportBeamIdx += 1;
             }
             for (int x = 0; x < numHorizontalFloorboards; x++)
@@ -180,8 +183,8 @@ class FloorBaseLayerBlueprint : BaseBlueprint
                 Floorboard.transform.localScale = new Vector3(FloorboardWidth, FloorboardHeight, FloorboardDepth);
                 Floorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 2, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
                 nextX += FloorboardWidth + rowSpacerWidth;
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, false);
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 2], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, false);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, false);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 2], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, false);
                 currSupportBeamIdx += 2;
             }
             if (y % 2 == 1)
@@ -190,8 +193,8 @@ class FloorBaseLayerBlueprint : BaseBlueprint
                 var halfFloorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
                 halfFloorboard.transform.localScale = new Vector3(FloorboardWidth / 2, FloorboardHeight, FloorboardDepth);
                 halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, true);
-                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 1], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
+                CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 1], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, true);
             }
             nextY += FloorboardHeight + spacerHeight;
         }
