@@ -3,10 +3,11 @@ using UnityEngine;
 
 public class Screw : MonoBehaviour
 {
+    public static float ScrewJointBreakForce = 300;
     public float GizmoDisplayRadius = 0.05f;
     private float GizmoScrewLength = 0.25f;
 
-    public FixedJoint ScrewJoint;
+    public Joint ScrewJoint;
 
     public ScrewableBody ParentBody;
     public ScrewableBody AttachedBody;
@@ -26,31 +27,35 @@ public class Screw : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Note for now this just Inits the joint
+    public void Init()
+    {
+        ScrewJoint = ParentBody.AddComponent<FixedJoint>();
+        //ScrewJoint.enableCollision = true;
+        ScrewJoint.connectedBody = AttachedBody.GetRigidbody();
+        ScrewJoint.breakForce = ScrewJointBreakForce;
+        ScrewJoint.breakTorque = ScrewJointBreakForce;
+        ScrewJoint.enablePreprocessing = false;
+    }
+
     public void SwapAttachedBody(ScrewableBody oldBody, ScrewableBody newBody)
     {
         if (oldBody == ParentBody)
         {
             ParentBody.AttachedScrews.Remove(this);
             Destroy(ScrewJoint);
-
             ParentBody = newBody;
-
             this.transform.SetParent(ParentBody.transform, true);
             ParentBody.AttachedScrews.Add(this);
-            ScrewJoint = ParentBody.AddComponent<FixedJoint>();
-            ScrewJoint.enableCollision = true;
-            ScrewJoint.connectedBody = AttachedBody.GetRigidbody();
+            Init();
         }
         else if (oldBody == AttachedBody)
         {
             AttachedBody.AttachedScrews.Remove(this);
             Destroy(ScrewJoint);
-
             AttachedBody = newBody;
-
             AttachedBody.AttachedScrews.Add(this);
-            ScrewJoint = ParentBody.AddComponent<FixedJoint>();
-            ScrewJoint.connectedBody = AttachedBody.GetRigidbody();
+            Init();
         }
         else
         {

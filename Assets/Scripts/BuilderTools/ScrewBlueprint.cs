@@ -24,11 +24,10 @@ public class ScrewBlueprint : BaseBlueprint
         screwGameObject.transform.rotation = transform.rotation;
         var screw = screwGameObject.GetComponent<Screw>();
         screwGameObject.transform.localScale = new Vector3(ScrewDiameter, ScrewDiameter, ScrewLength);
-        screw.ScrewJoint = Body1.gameObject.AddComponent<FixedJoint>();
-        screw.ScrewJoint.connectedBody = Body2.GetRigidbody();
-        screw.ScrewJoint.enableCollision = true;
+        //screw.ScrewJoint.enablePreprocessing = false;
         screw.ParentBody = Body1;
         screw.AttachedBody = Body2;
+        screw.Init();
         screwGameObject.transform.SetParent(Body1.transform, true);
         ActiveScrew = screw;
     }
