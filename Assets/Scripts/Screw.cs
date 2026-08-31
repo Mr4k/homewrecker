@@ -3,7 +3,9 @@ using UnityEngine;
 
 public class Screw : MonoBehaviour
 {
-    public static float ScrewJointBreakForce = 300;
+    public static float ScrewJointBreakForce = 200;
+    public static float ScrewJointBreakTorque = 200;
+
     public float GizmoDisplayRadius = 0.05f;
     private float GizmoScrewLength = 0.25f;
 
@@ -34,7 +36,7 @@ public class Screw : MonoBehaviour
         //ScrewJoint.enableCollision = true;
         ScrewJoint.connectedBody = AttachedBody.GetRigidbody();
         ScrewJoint.breakForce = ScrewJointBreakForce;
-        ScrewJoint.breakTorque = ScrewJointBreakForce;
+        ScrewJoint.breakTorque = ScrewJointBreakTorque;
         ScrewJoint.enablePreprocessing = false;
     }
 
