@@ -8,6 +8,12 @@ public class Screw : MonoBehaviour
 
     public ScrewableBody[] AttachedBodies = new ScrewableBody[2];
 
+    public void Init(ScrewableBody body1, ScrewableBody body2)
+    {
+        AttachedBodies[0] = body1;
+        AttachedBodies[1] = body2;
+    }
+
     public void Start()
     {
         foreach (var body in AttachedBodies)

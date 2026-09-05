@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody))]
 public class ScrewableBody : MonoBehaviour
 {
     private static int NextScrewableBodyId = 0;
@@ -27,7 +26,7 @@ public class ScrewableBody : MonoBehaviour
         MarkAttachedIslandWithSmallestBodyId(-1);
     }
 
-    public void ReparentBody()
+    public void ReparentBodyAndToggleRigidBody()
     {
         var parentBody = GetComponentInParent<ScrewableBody>();
         int parentBodyId;
@@ -39,6 +38,21 @@ public class ScrewableBody : MonoBehaviour
         else
         {
             parentBodyId = parentBody.Id;
+        }
+
+        var rb = gameObject.GetComponent<Rigidbody>();
+        if (SmallestAttachedBodyId == Id)
+        {
+            if (rb == null)
+            {
+                gameObject.AddComponent<Draggable>();
+                gameObject.AddComponent<Rigidbody>();
+            }
+        }
+        else if (rb != null)
+        {
+            Destroy(GetComponent<Draggable>());
+            Destroy(rb);
         }
 
         // do not re parent on being marked dirty
@@ -75,7 +89,7 @@ public class ScrewableBody : MonoBehaviour
                 islandBody.SmallestAttachedBodyId = smallestIslandBodyId;
 
                 // consider re parenting the body if it's not just being marked dirty
-                ReparentBody();
+                islandBody.ReparentBodyAndToggleRigidBody();
 
                 foreach (var screw in islandBody.AttachedScrews)
                 {
@@ -117,7 +131,7 @@ public class ScrewableBody : MonoBehaviour
 
     public int IncrementId()
     {
-        return ++NextScrewableBodyId;
+        return NextScrewableBodyId++;
     }
 
     public Rigidbody GetRigidbody()

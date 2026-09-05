@@ -15,7 +15,6 @@ public class ScrewBlueprint : BaseBlueprint
     {
         if (ActiveScrew != null)
         {
-            DestroyImmediate(ActiveScrew.ScrewJoint);
             DestroyImmediate(ActiveScrew.gameObject);
         }
 
@@ -24,10 +23,7 @@ public class ScrewBlueprint : BaseBlueprint
         screwGameObject.transform.rotation = transform.rotation;
         var screw = screwGameObject.GetComponent<Screw>();
         screwGameObject.transform.localScale = new Vector3(ScrewDiameter, ScrewDiameter, ScrewLength);
-        //screw.ScrewJoint.enablePreprocessing = false;
-        screw.AttachedBody2 = Body1;
-        screw.AttachedBody = Body2;
-        screw.Init();
+        screw.Init(Body1, Body2);
         screwGameObject.transform.SetParent(Body1.transform, true);
         ActiveScrew = screw;
     }
