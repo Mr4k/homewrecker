@@ -33,7 +33,17 @@ public class Screw : MonoBehaviour
 
     public void SwapAttachedBody(ScrewableBody oldBody, ScrewableBody newBody)
     {
-        throw new System.Exception("TODO!");
+        oldBody.MarkAttachedIslandDirty();
+        newBody.MarkAttachedIslandDirty();
+        oldBody.AttachedScrews.Remove(this);
+        newBody.AttachedScrews.Add(this);
+        for (int i = 0; i < AttachedBodies.Length; i++)
+        {
+            if (AttachedBodies[i] == oldBody)
+            {
+                AttachedBodies[i] = newBody;
+            }
+        }
     }
 
     void OnDrawGizmos()

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class ScrewableBody : MonoBehaviour
@@ -55,6 +54,11 @@ public class ScrewableBody : MonoBehaviour
             Destroy(rb);
         }
 
+        if (SmallestAttachedBodyId == Id && transform.parent != ScrewableBodyRoot.transform)
+        {
+            transform.SetParent(ScrewableBodyRoot.transform, true);
+        }
+
         // do not re parent on being marked dirty
         if (SmallestAttachedBodyId >= 0 && SmallestAttachedBodyId != parentBodyId)
         {
@@ -89,7 +93,10 @@ public class ScrewableBody : MonoBehaviour
                 islandBody.SmallestAttachedBodyId = smallestIslandBodyId;
 
                 // consider re parenting the body if it's not just being marked dirty
-                islandBody.ReparentBodyAndToggleRigidBody();
+                if (smallestIslandBodyId >= 0)
+                {
+                    islandBody.ReparentBodyAndToggleRigidBody();
+                }
 
                 foreach (var screw in islandBody.AttachedScrews)
                 {
