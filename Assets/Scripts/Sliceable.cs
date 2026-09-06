@@ -407,7 +407,8 @@ public class Sliceable : MonoBehaviour
             // we use a clone here so we can modify in place when screws detach
             foreach (var screw in screwableBody.AttachedScrews.ToList())
             {
-                var localScrewPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(screw.transform.position);
+                var worldScrewAttachedPointPosition = screw.getWorldIntersectionPosition();
+                var localScrewPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(worldScrewAttachedPointPosition);
                 var side = Vector3.Dot(localScrewPosition - startPoint, cutPlaneNormal);
                 if (side <= 0)
                 {

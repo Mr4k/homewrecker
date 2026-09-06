@@ -7,12 +7,14 @@ public class Screw : MonoBehaviour
     private float GizmoScrewLength = 0.25f;
 
     public ScrewableBody[] AttachedBodies = new ScrewableBody[2];
+    private Vector3 _intersectionPositionRelativeToParentBody = Vector3.zero;
 
-    public void Init(ScrewableBody body1, ScrewableBody body2)
+    public void Init(ScrewableBody body1, ScrewableBody body2, Vector3 worldIntersectionPosition)
     {
         AttachedBodies[0] = body1;
         AttachedBodies[1] = body2;
         transform.SetParent(AttachedBodies[0].transform, true);
+        _intersectionPositionRelativeToParentBody = AttachedBodies[0].transform.worldToLocalMatrix.MultiplyPoint3x4(worldIntersectionPosition);
     }
 
     public void Start()
@@ -21,6 +23,11 @@ public class Screw : MonoBehaviour
         {
             body.AttachedScrews.Add(this);
         }
+    }
+
+    public Vector3 getWorldIntersectionPosition()
+    {
+        return AttachedBodies[0].transform.localToWorldMatrix.MultiplyPoint3x4(_intersectionPositionRelativeToParentBody);
     }
 
     public void Unscrew()
@@ -42,6 +49,7 @@ public class Screw : MonoBehaviour
         newBody.MarkAttachedIslandDirty();
         oldBody.AttachedScrews.Remove(this);
         newBody.AttachedScrews.Add(this);
+        var worldIntersectionPosition = getWorldIntersectionPosition();
         for (int i = 0; i < AttachedBodies.Length; i++)
         {
             if (AttachedBodies[i] == oldBody)
@@ -50,6 +58,7 @@ public class Screw : MonoBehaviour
             }
         }
         transform.SetParent(AttachedBodies[0].transform, true);
+        _intersectionPositionRelativeToParentBody = AttachedBodies[0].transform.worldToLocalMatrix.MultiplyPoint3x4(worldIntersectionPosition);
     }
 
     void OnDrawGizmos()

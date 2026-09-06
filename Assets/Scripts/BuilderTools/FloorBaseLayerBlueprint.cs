@@ -63,7 +63,6 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             var halfEdgeWidth = isHalf ? floorboardWidth / 4 : floorboardWidth / 2;
             var heightOffsetFromCenter = PercentageOfIntraFloorScrewSpaceAlongHeight * floorboardHeight / 2.0f;
             floorboardScrewBlueprint.Body1 = floorboardBody;
-            floorboardScrewBlueprint.Body2 = supportBeamBody;
             floorboardScrewBlueprint.transform.localPosition = new Vector3(-xSign * halfEdgeWidth + xSign * widthOffsetFromEdge, ySign * heightOffsetFromCenter, -0.1f) + localFloorboardCenter;
             floorboardScrewBlueprint.ScrewDiameter = GetScrewDiameter(floorboardWidth, floorboardHeight);
             floorboardScrewBlueprint.RefreshBlueprint();

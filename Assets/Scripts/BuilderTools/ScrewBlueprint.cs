@@ -4,7 +4,6 @@ using UnityEngine;
 public class ScrewBlueprint : BaseBlueprint
 {
     public ScrewableBody Body1;
-    public ScrewableBody Body2;
     public float GizmoDisplayRadius = 0.05f;
     public float ScrewLength = 0.25f;
     public float ScrewDiameter = 0.1f;
@@ -23,7 +22,31 @@ public class ScrewBlueprint : BaseBlueprint
         screwGameObject.transform.rotation = transform.rotation;
         var screw = screwGameObject.GetComponent<Screw>();
         screwGameObject.transform.localScale = new Vector3(ScrewDiameter, ScrewDiameter, ScrewLength);
-        screw.Init(Body1, Body2);
+
+        var results = Physics.RaycastAll(new Ray(transform.position, transform.forward), ScrewLength);
+        var lowestDistance = ScrewLength * 10;
+        ScrewableBody body2 = null;
+        Vector3 worldIntersectionPoint = Vector3.zero;
+        foreach (var res in results)
+        {
+            var screwableBody2 = res.collider.gameObject.GetComponent<ScrewableBody>();
+            if (screwableBody2 && screwableBody2 != Body1)
+            {
+                if (res.distance < lowestDistance)
+                {
+                    lowestDistance = res.distance;
+                    body2 = res.collider.gameObject.GetComponent<ScrewableBody>();
+                    worldIntersectionPoint = res.point;
+                }
+            }
+
+        }
+        if (body2 == null)
+        {
+            throw new System.Exception("Could not screw in screw could not find other body");
+        }
+
+        screw.Init(Body1, body2, worldIntersectionPoint);
         ActiveScrew = screw;
     }
 
