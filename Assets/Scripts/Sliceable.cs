@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
 public class Sliceable : MonoBehaviour
 {
-    public GameObject SliceablePrefab;
     public void Awake()
     {
         var meshFilter = GetComponent<MeshFilter>();
@@ -389,7 +387,7 @@ public class Sliceable : MonoBehaviour
         meshFilter.sharedMesh = topMesh;
         meshCollider.sharedMesh = topMesh;
 
-        var secondSliceable = Instantiate(SliceablePrefab, transform.parent);
+        var secondSliceable = Instantiate(SliceableBodyManager.GetSliceablePrefab(), transform.parent);
         secondSliceable.transform.localPosition = transform.localPosition;
         secondSliceable.transform.localRotation = transform.localRotation;
         secondSliceable.transform.localScale = transform.localScale;
@@ -399,10 +397,12 @@ public class Sliceable : MonoBehaviour
 
         // handle screwables
         var screwableBody = GetComponent<ScrewableBody>();
+        screwableBody.RefreshMeshVolume();
         if (screwableBody != null)
         {
             var secondScrewableBody = secondSliceable.AddComponent<ScrewableBody>();
             secondScrewableBody.density = screwableBody.density;
+            secondScrewableBody.RefreshMeshVolume();
             // divide the screws
             // we use a clone here so we can modify in place when screws detach
             foreach (var screw in screwableBody.AttachedScrews.ToList())

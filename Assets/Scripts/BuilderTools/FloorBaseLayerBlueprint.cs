@@ -65,7 +65,7 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             floorboardScrewBlueprint.Body1 = floorboardBody;
             floorboardScrewBlueprint.transform.localPosition = new Vector3(-xSign * halfEdgeWidth + xSign * widthOffsetFromEdge, ySign * heightOffsetFromCenter, -0.1f) + localFloorboardCenter;
             floorboardScrewBlueprint.ScrewDiameter = GetScrewDiameter(floorboardWidth, floorboardHeight);
-            floorboardScrewBlueprint.RefreshBlueprint();
+            BlueprintCoordinator.QueueRefresh(floorboardScrewBlueprint.RefreshBlueprint);
         }
     }
 

@@ -7,7 +7,7 @@ public class Screw : MonoBehaviour
     private float GizmoScrewLength = 0.25f;
 
     public ScrewableBody[] AttachedBodies = new ScrewableBody[2];
-    private Vector3 _intersectionPositionRelativeToParentBody = Vector3.zero;
+    public Vector3 _intersectionPositionRelativeToParentBody = Vector3.zero;
 
     public void Init(ScrewableBody body1, ScrewableBody body2, Vector3 worldIntersectionPosition)
     {
@@ -61,9 +61,15 @@ public class Screw : MonoBehaviour
         _intersectionPositionRelativeToParentBody = AttachedBodies[0].transform.worldToLocalMatrix.MultiplyPoint3x4(worldIntersectionPosition);
     }
 
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.DrawSphere(getWorldIntersectionPosition(), GizmoDisplayRadius * 0.5f);
+    }
+
     void OnDrawGizmos()
     {
         Gizmos.DrawSphere(transform.position, GizmoDisplayRadius);
         Gizmos.DrawRay(transform.position, transform.forward * GizmoScrewLength);
+        Gizmos.DrawSphere(getWorldIntersectionPosition(), GizmoDisplayRadius * 0.5f);
     }
 }
