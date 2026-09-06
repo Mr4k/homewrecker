@@ -12,6 +12,7 @@ public class Screw : MonoBehaviour
     {
         AttachedBodies[0] = body1;
         AttachedBodies[1] = body2;
+        transform.SetParent(AttachedBodies[0].transform, true);
     }
 
     public void Start()
@@ -24,6 +25,10 @@ public class Screw : MonoBehaviour
 
     public void Unscrew()
     {
+        foreach (var body in AttachedBodies)
+        {
+            body.MarkAttachedIslandDirty();
+        }
         foreach (var body in AttachedBodies)
         {
             body.AttachedScrews.Remove(this);
@@ -44,6 +49,7 @@ public class Screw : MonoBehaviour
                 AttachedBodies[i] = newBody;
             }
         }
+        transform.SetParent(AttachedBodies[0].transform, true);
     }
 
     void OnDrawGizmos()

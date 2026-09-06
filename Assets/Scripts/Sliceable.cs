@@ -399,9 +399,10 @@ public class Sliceable : MonoBehaviour
 
         // handle screwables
         var screwableBody = GetComponent<ScrewableBody>();
-        if (screwableBody != null && screwableBody.AttachedScrews.Count > 0)
+        if (screwableBody != null)
         {
             var secondScrewableBody = secondSliceable.AddComponent<ScrewableBody>();
+            secondScrewableBody.density = screwableBody.density;
             // divide the screws
             // we use a clone here so we can modify in place when screws detach
             foreach (var screw in screwableBody.AttachedScrews.ToList())
