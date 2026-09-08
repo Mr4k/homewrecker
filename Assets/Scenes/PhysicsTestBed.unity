@@ -11654,6 +11654,10 @@ PrefabInstance:
       propertyPath: m_CullingMask.m_Bits
       value: 1975
       objectReference: {fileID: 0}
+    - target: {fileID: 5400000, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
+      propertyPath: m_Mass
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 11400000, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
       propertyPath: CapsuleRadius
       value: 0.1

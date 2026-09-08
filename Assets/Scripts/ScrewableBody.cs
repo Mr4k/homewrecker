@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -176,12 +177,13 @@ public class ScrewableBody : MonoBehaviour
 
     private float GetRigidBodyMassAccountingForChildren()
     {
-        float mass = 0.0f;
+        float trueMass = 0.0f;
         foreach (var body in gameObject.GetComponentsInChildren<ScrewableBody>())
         {
-            mass += body.GetMeshMass();
+            trueMass += body.GetMeshMass();
         }
-        return mass;
+        float adjustedMass = Mathf.Clamp(trueMass, ScrewableBodyManager.GetMinMass(), ScrewableBodyManager.GetMaxMass());
+        return adjustedMass;
     }
 
 
