@@ -6,6 +6,8 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
 public class Sliceable : MonoBehaviour
 {
+    const int TOP_PARTION_IDX = 0;
+    const int BOTTOM_PARTION_IDX = 1;
     public void Awake()
     {
         var meshFilter = GetComponent<MeshFilter>();
@@ -20,37 +22,40 @@ public class Sliceable : MonoBehaviour
         }
     }
 
-    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange)
+    struct SliceInternalResult
     {
-        cameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
-        startPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
-        endPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(endPoint);
+        public List<Vector3>[] partitionMeshVerts;
+        public List<Vector3>[] partitionMeshNormals;
+        public List<int>[] partitionCapIndexes;
+        public List<int>[] paritionMeshTriangles;
+        public Vector3 cutPlaneNormal;
+        public bool canSlice;
+    }
 
+    private SliceInternalResult _sliceInternal(Mesh mesh, Vector3 localCameraPosition, Vector3 localStartPoint, Vector3 localEndPoint, float maxSliceRange)
+    {
         // construct the side bounds
         Vector3[] anchorBoundNormals = new Vector3[2];
         Vector3[] anchorPoints = new Vector3[]
         {
-            startPoint,
-            endPoint,
+            localStartPoint,
+            localEndPoint,
         };
-        Vector3 originToStart = startPoint - cameraPosition;
-        Vector3 cutPlaneNormal = Vector3.Cross(endPoint - startPoint, originToStart);
+        Vector3 originToStart = localStartPoint - localCameraPosition;
+        Vector3 cutPlaneNormal = Vector3.Cross(localEndPoint - localStartPoint, originToStart);
         cutPlaneNormal.Normalize(); // not strictly needed but might help us with stability
 
         // now we assign vertices to a side or out of bounds
         // if there are out of bounds verts on both sides refuse to cut I think
         // assuming the mesh is convex then that means the cut wasn't all the way through?
 
-        var meshFilter = GetComponent<MeshFilter>();
-        var meshCollider = GetComponent<MeshCollider>();
-        var mesh = meshFilter.sharedMesh;
         Vector3[] vertices = mesh.vertices;
         Dictionary<int, float> signedVertDistAlongCutNormal = new Dictionary<int, float>();
         for (var i = 0; i < vertices.Length; i++)
         {
             Vector3 vert = vertices[i];
             // figure out which side of the cut plane we are on
-            Vector3 vertFromStart = vert - startPoint;
+            Vector3 vertFromStart = vert - localStartPoint;
             float signedDistanceAlongCutNormal = Vector3.Dot(vertFromStart, cutPlaneNormal);
             signedVertDistAlongCutNormal.Add(i, signedDistanceAlongCutNormal);
         }
@@ -60,8 +65,6 @@ public class Sliceable : MonoBehaviour
         // uhhh maybe caps seem a little complicated
         // feels like one way is to take a string and then wind it around the polygon on the plane
 
-        const int TOP_PARTION_IDX = 0;
-        const int BOTTOM_PARTION_IDX = 1;
         List<Vector3>[] partitionMeshVerts = new List<Vector3>[2];
         List<Vector3>[] partitionMeshNormals = new List<Vector3>[2];
         List<int>[] partitionCapIndexes = new List<int>[2];
@@ -270,7 +273,7 @@ public class Sliceable : MonoBehaviour
         for (int i = 0; i < 2; i++)
         {
             Vector3 anchorPoint = anchorPoints[i];
-            Vector3 originToAnchor = anchorPoint - cameraPosition;
+            Vector3 originToAnchor = anchorPoint - localCameraPosition;
             Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
             anchorNormal.Normalize();
             anchorBoundNormals[i] = anchorNormal;
@@ -301,18 +304,56 @@ public class Sliceable : MonoBehaviour
             }
             atLeastOneParitionInBounds |= allPartitionVertsInBounds;
         }
-
         if (partitionMeshVerts[BOTTOM_PARTION_IDX].Count == 0 || partitionMeshVerts[TOP_PARTION_IDX].Count == 0)
         {
             Debug.Log("cannot cut convex polyhedra everything is on a single side");
-            return;
+            return new SliceInternalResult()
+            {
+                canSlice = false,
+            };
         }
 
         if (!atLeastOneParitionInBounds)
         {
             Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
+            return new SliceInternalResult()
+            {
+                canSlice = false,
+            };
+        }
+
+        return new SliceInternalResult()
+        {
+            partitionMeshVerts = partitionMeshVerts,
+            partitionMeshNormals = partitionMeshNormals,
+            partitionCapIndexes = partitionCapIndexes,
+            paritionMeshTriangles = paritionMeshTriangles,
+            cutPlaneNormal = cutPlaneNormal,
+            canSlice = true,
+        };
+    }
+
+    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange)
+    {
+        var localCameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
+        var localStartPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
+        var localEndPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(endPoint);
+
+        var meshFilter = GetComponent<MeshFilter>();
+        var meshCollider = GetComponent<MeshCollider>();
+
+        var internalSliceRes = _sliceInternal(meshFilter.sharedMesh, localCameraPosition, localStartPoint, localEndPoint, maxSliceRange);
+
+        if (!internalSliceRes.canSlice)
+        {
             return;
         }
+
+        var partitionMeshVerts = internalSliceRes.partitionMeshVerts;
+        var partitionMeshNormals = internalSliceRes.partitionMeshNormals;
+        var partitionCapIndexes = internalSliceRes.partitionCapIndexes;
+        var partitionMeshTriangles = internalSliceRes.paritionMeshTriangles;
+        var cutPlaneNormal = internalSliceRes.cutPlaneNormal;
 
         // fill holes
         // note we rely heavily on this mesh being convex
@@ -360,7 +401,7 @@ public class Sliceable : MonoBehaviour
             partitionVerts.Add(center);
             partitionNormals.Add(cutPlaneNormal * -normalScalar);
             int centerIdx = partitionVerts.Count - 1;
-            var partitionTriangles = paritionMeshTriangles[partitionIdx];
+            var partitionTriangles = partitionMeshTriangles[partitionIdx];
             for (int i = 0; i < dupeCapIndexes.Count; i++)
             {
                 int currIdx = dupeCapIndexes[i];
@@ -375,13 +416,13 @@ public class Sliceable : MonoBehaviour
         {
             vertices = partitionMeshVerts[TOP_PARTION_IDX].ToArray(),
             normals = partitionMeshNormals[TOP_PARTION_IDX].ToArray(),
-            triangles = paritionMeshTriangles[TOP_PARTION_IDX].ToArray(),
+            triangles = partitionMeshTriangles[TOP_PARTION_IDX].ToArray(),
         };
         Mesh bottomMesh = new Mesh()
         {
             vertices = partitionMeshVerts[BOTTOM_PARTION_IDX].ToArray(),
             normals = partitionMeshNormals[BOTTOM_PARTION_IDX].ToArray(),
-            triangles = paritionMeshTriangles[BOTTOM_PARTION_IDX].ToArray(),
+            triangles = partitionMeshTriangles[BOTTOM_PARTION_IDX].ToArray(),
         };
 
         meshFilter.sharedMesh = topMesh;
@@ -409,7 +450,7 @@ public class Sliceable : MonoBehaviour
             {
                 var worldScrewAttachedPointPosition = screw.getWorldIntersectionPosition();
                 var localScrewPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(worldScrewAttachedPointPosition);
-                var side = Vector3.Dot(localScrewPosition - startPoint, cutPlaneNormal);
+                var side = Vector3.Dot(localScrewPosition - localStartPoint, cutPlaneNormal);
                 if (side <= 0)
                 {
                     // in this case we are on the bottom mesh and need to reassign

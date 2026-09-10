@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
@@ -45,9 +46,23 @@ public class CutTool : BaseTool
                 // cut logic
                 Debug.Log("cut");
                 // TODO obviously this needs to be improved
-                foreach (var slicable in FindObjectsByType<Sliceable>(FindObjectsSortMode.None))
+                // TODO create a thin box here an find the correct orientation to narrow down sliceables
+                // Then for each sliceable that's possible get enter and exit points
+                // Then determine for each pair of enter and exit points (a segment) if they are allowed to cut
+                // by either construction a mesh collider or using raycasting along the segment
+                Vector3 sphereCenter = (cameraTransform.position + _startCutPoint + _endCutPoint) / 3;
+                float sphereRadius = Mathf.Max(
+                    (cameraTransform.position - sphereCenter).magnitude,
+                    (_startCutPoint - sphereCenter).magnitude,
+                    (_endCutPoint - sphereCenter).magnitude);
+                var colliders = Physics.OverlapSphere(sphereCenter, sphereRadius);
+                foreach (var col in colliders)
                 {
-                    slicable.Slice(cameraTransform.position, _startCutPoint, _endCutPoint, 1000);
+                    var sliceable = col.gameObject.GetComponent<Sliceable>();
+                    if (sliceable != null)
+                    {
+                        sliceable.Slice(cameraTransform.position, _startCutPoint, _endCutPoint, 1000);
+                    }
                 }
             }
         }
