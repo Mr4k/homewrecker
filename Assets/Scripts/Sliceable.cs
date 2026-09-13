@@ -12,13 +12,6 @@ public class Sliceable : MonoBehaviour
     private List<int> _triangles = new List<int>();
     private List<Vector3> _normals = new List<Vector3>();
 
-    // debug
-    private List<Vector3> _debugCandidates = new List<Vector3>();
-    private List<Vector3> _debugAnchorPoints = new List<Vector3>();
-    private List<Vector3> _debugAnchorNormals = new List<Vector3>();
-    private Vector3 _debugCutPlaneNormal = Vector3.zero;
-    private Vector3 _debugLocalCameraPosition = Vector3.zero;
-
     public void Start()
     {
         var meshFilter = GetComponent<MeshFilter>();
@@ -288,8 +281,6 @@ public class Sliceable : MonoBehaviour
 
         // once we establish the cuts we can figure out if they are full cuts or not
         // for a convex mesh at least one of the cuts must fully lie inside the anchor bounds
-        _debugAnchorPoints.Clear();
-        _debugAnchorNormals.Clear();
         for (int i = 0; i < 2; i++)
         {
             Vector3 anchorPoint = anchorPoints[i];
@@ -297,11 +288,7 @@ public class Sliceable : MonoBehaviour
             Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
             anchorNormal.Normalize();
             anchorBoundNormals[i] = anchorNormal;
-            _debugAnchorPoints.Add(anchorPoint);
-            _debugAnchorNormals.Add(anchorNormal);
         }
-        _debugCutPlaneNormal = cutPlaneNormal;
-        _debugLocalCameraPosition = localCameraPosition;
 
         bool atLeastOneParitionInBounds = false;
         for (int partitionIdx = 0; partitionIdx < 2; partitionIdx++)
@@ -343,7 +330,6 @@ public class Sliceable : MonoBehaviour
 
         // now we figure out the line between the "left" of what the player sees and the "right"
         // this is so we can draw a preview line and then test if there is anything in the way of this segment
-        _debugCandidates.Clear();
         var screenSpaceAnchorPoints = new Vector2[2];
         for (int i = 0; i < 2; i++)
         {
@@ -553,26 +539,5 @@ public class Sliceable : MonoBehaviour
         var cosBetweenRayAndDown = Vector3.Dot(normalEdgeRayThroughPlane, planeNormal);
         var amountToExtendRay = -signedStartShortestDistToPlane / cosBetweenRayAndDown;
         return edgeStart + normalEdgeRayThroughPlane * amountToExtendRay;
-    }
-
-    private void OnDrawGizmos()
-    {
-        /*Gizmos.matrix = transform.localToWorldMatrix;
-        foreach (var pt in _debugCandidates)
-        {
-            Gizmos.DrawSphere(pt, 0.1f);
-        }
-        for (var i = 0; i < _debugAnchorPoints.Count; i++)
-        {
-            Gizmos.DrawSphere(_debugAnchorPoints[i], 0.1f);
-            Gizmos.color = Color.red;
-            Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugAnchorNormals[i]));
-            Gizmos.color = Color.blue;
-            Gizmos.DrawLine(_debugLocalCameraPosition, _debugAnchorPoints[i]);
-            Gizmos.color = Color.green;
-            Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugCutPlaneNormal));
-            Gizmos.color = Color.white;
-            //Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugCutPlaneNormal * 0.5f));
-        }*/
     }
 }
