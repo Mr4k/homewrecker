@@ -4,8 +4,9 @@ using UnityEngine;
 public class SmashTool : BaseTool
 {
     public float SmashRange = 5f;
-    public override void ActiveToolUpdate(Transform cameraTransform)
+    public override void ActiveToolUpdate(Camera camera)
     {
+        Transform cameraTransform = camera.transform;
         if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, SmashRange))
         {
             if (hit.collider && hit.collider.GetComponent<Smashable>())

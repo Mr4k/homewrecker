@@ -11,8 +11,9 @@ public class HandTool : BaseTool
     public float Damping = 8f;
     public Draggable _held;
     public Vector3 _heldGrabPoint;
-    public override void ActiveToolUpdate(Transform cameraTransform)
+    public override void ActiveToolUpdate(Camera camera)
     {
+        Transform cameraTransform = camera.transform;
         if (_held == null && Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, GrabRange))
         {
             if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())

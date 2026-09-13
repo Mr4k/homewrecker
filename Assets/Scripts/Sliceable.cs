@@ -8,7 +8,18 @@ public class Sliceable : MonoBehaviour
 {
     const int TOP_PARTION_IDX = 0;
     const int BOTTOM_PARTION_IDX = 1;
-    public void Awake()
+    private List<Vector3> _vertices = new List<Vector3>();
+    private List<int> _triangles = new List<int>();
+    private List<Vector3> _normals = new List<Vector3>();
+
+    // debug
+    private List<Vector3> _debugCandidates = new List<Vector3>();
+    private List<Vector3> _debugAnchorPoints = new List<Vector3>();
+    private List<Vector3> _debugAnchorNormals = new List<Vector3>();
+    private Vector3 _debugCutPlaneNormal = Vector3.zero;
+    private Vector3 _debugLocalCameraPosition = Vector3.zero;
+
+    public void Start()
     {
         var meshFilter = GetComponent<MeshFilter>();
         var meshCollider = GetComponent<MeshCollider>();
@@ -20,6 +31,15 @@ public class Sliceable : MonoBehaviour
         {
             throw new Exception("mesh must be convex (the note collider being convex is just a proxy for this)");
         }
+        RefreshMesh(meshFilter.sharedMesh);
+    }
+
+    private void RefreshMesh(Mesh mesh)
+    {
+        mesh.GetVertices(_vertices);
+        // assume submesh 0 is where its at
+        mesh.GetTriangles(_triangles, 0);
+        mesh.GetNormals(_normals);
     }
 
     struct SliceInternalResult
@@ -27,12 +47,14 @@ public class Sliceable : MonoBehaviour
         public List<Vector3>[] partitionMeshVerts;
         public List<Vector3>[] partitionMeshNormals;
         public List<int>[] partitionCapIndexes;
-        public List<int>[] paritionMeshTriangles;
+        public List<int>[] partitionMeshTriangles;
+        public Vector3 localSliceSegmentStart;
+        public Vector3 localSliceSegmentEnd;
         public Vector3 cutPlaneNormal;
         public bool canSlice;
     }
 
-    private SliceInternalResult _sliceInternal(Mesh mesh, Vector3 localCameraPosition, Vector3 localStartPoint, Vector3 localEndPoint, float maxSliceRange)
+    private SliceInternalResult _sliceInternal(List<Vector3> vertices, List<int> triangles, List<Vector3> normals, Vector3 localCameraPosition, Vector3 localStartPoint, Vector3 localEndPoint, float maxSliceRange, Matrix4x4 localToWorld, Camera cam)
     {
         // construct the side bounds
         Vector3[] anchorBoundNormals = new Vector3[2];
@@ -49,9 +71,8 @@ public class Sliceable : MonoBehaviour
         // if there are out of bounds verts on both sides refuse to cut I think
         // assuming the mesh is convex then that means the cut wasn't all the way through?
 
-        Vector3[] vertices = mesh.vertices;
         Dictionary<int, float> signedVertDistAlongCutNormal = new Dictionary<int, float>();
-        for (var i = 0; i < vertices.Length; i++)
+        for (var i = 0; i < vertices.Count; i++)
         {
             Vector3 vert = vertices[i];
             // figure out which side of the cut plane we are on
@@ -62,8 +83,6 @@ public class Sliceable : MonoBehaviour
 
         // cut the mesh
         // broken verts will form the faces we need to construct
-        // uhhh maybe caps seem a little complicated
-        // feels like one way is to take a string and then wind it around the polygon on the plane
 
         List<Vector3>[] partitionMeshVerts = new List<Vector3>[2];
         List<Vector3>[] partitionMeshNormals = new List<Vector3>[2];
@@ -81,7 +100,7 @@ public class Sliceable : MonoBehaviour
         }
 
         // NOTE probably assume we only have one submesh for now
-        for (int i = 0; i < mesh.triangles.Length / 3; i++)
+        for (int i = 0; i < triangles.Count / 3; i++)
         {
             // Cases
             // 1) triangles have all points one partition
@@ -95,7 +114,7 @@ public class Sliceable : MonoBehaviour
             List<int> fullTriangle = new List<int>();
             for (int j = 0; j < 3; j++)
             {
-                var vertIdx = mesh.triangles[3 * i + j];
+                var vertIdx = triangles[3 * i + j];
                 fullTriangle.Add(vertIdx);
                 if (signedVertDistAlongCutNormal[vertIdx] > 0)
                 {
@@ -127,8 +146,8 @@ public class Sliceable : MonoBehaviour
                 {
                     if (!sameSideVertMapping.ContainsKey(vertIdx))
                     {
-                        partitionVerts.Add(mesh.vertices[vertIdx]);
-                        partitionNormals.Add(mesh.normals[vertIdx]);
+                        partitionVerts.Add(vertices[vertIdx]);
+                        partitionNormals.Add(normals[vertIdx]);
                         sameSideVertMapping.Add(vertIdx, partitionVerts.Count - 1);
                     }
                     partitionTriangles.Add(sameSideVertMapping[vertIdx]);
@@ -154,8 +173,8 @@ public class Sliceable : MonoBehaviour
 
                 Dictionary<int, int> smallVertMappingForTri = new Dictionary<int, int>();
                 var edgeStartIdx = triVertsSmallerSubset.ToList()[0];
-                var edgeStartVert = mesh.vertices[edgeStartIdx];
-                var edgeStartNormal = mesh.normals[edgeStartIdx];
+                var edgeStartVert = vertices[edgeStartIdx];
+                var edgeStartNormal = normals[edgeStartIdx];
 
                 // this is a direct vert mapping
                 if (!sameSideVertMapping.ContainsKey(edgeStartIdx))
@@ -167,18 +186,17 @@ public class Sliceable : MonoBehaviour
                 int edgeStartMappedIdx = sameSideVertMapping[edgeStartIdx];
                 smallVertMappingForTri.Add(edgeStartIdx, edgeStartMappedIdx);
 
-
                 // figure out the projected verts
                 foreach (var edgeEndIdx in triVertsLargerSubset)
                 {
-                    var edgeEndVert = mesh.vertices[edgeEndIdx];
+                    var edgeEndVert = vertices[edgeEndIdx];
                     var edgeRayTorwardsPlane = edgeEndVert - edgeStartVert;
 
                     var projectedVert = clampEdgeAtPlane(edgeStartVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[edgeStartIdx]);
                     smallPartitionVerts.Add(projectedVert);
                     // in a really sick implementation this would interpolate the normal along the edge
                     // but for now I'm being lazy and assuming the normals will be consistent across the face
-                    var projectedNormal = mesh.normals[edgeEndIdx];
+                    var projectedNormal = normals[edgeEndIdx];
                     smallPartitionNormals.Add(projectedNormal);
 
                     smallVertMappingForTri.Add(edgeEndIdx, smallPartitionVerts.Count - 1);
@@ -207,12 +225,12 @@ public class Sliceable : MonoBehaviour
                 {
                     var prevVertexIdx = fullTriangle[(j - 1 + 3) % 3];
                     var currVertexIdx = fullTriangle[j];
-                    var currVertex = mesh.vertices[currVertexIdx];
-                    var currNormal = mesh.normals[currVertexIdx];
+                    var currVertex = vertices[currVertexIdx];
+                    var currNormal = normals[currVertexIdx];
                     if (triVertsLargerSubset.Contains(currVertexIdx) && !triVertsLargerSubset.Contains(prevVertexIdx))
                     {
-                        var prevVert = mesh.vertices[prevVertexIdx];
-                        var prevNormal = mesh.normals[prevVertexIdx];
+                        var prevVert = vertices[prevVertexIdx];
+                        var prevNormal = normals[prevVertexIdx];
                         var edgeRayTorwardsPlane = prevVert - currVertex;
                         // project the other side vert
                         var projectedVert = clampEdgeAtPlane(currVertex, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[currVertexIdx]);
@@ -226,7 +244,7 @@ public class Sliceable : MonoBehaviour
                     }
                     else if (!triVertsLargerSubset.Contains(currVertexIdx) && triVertsLargerSubset.Contains(prevVertexIdx))
                     {
-                        var prevVert = mesh.vertices[prevVertexIdx];
+                        var prevVert = vertices[prevVertexIdx];
                         var edgeRayTorwardsPlane = currVertex - prevVert;
                         // project the other side vert
                         var projectedVert = clampEdgeAtPlane(prevVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[prevVertexIdx]);
@@ -270,6 +288,8 @@ public class Sliceable : MonoBehaviour
 
         // once we establish the cuts we can figure out if they are full cuts or not
         // for a convex mesh at least one of the cuts must fully lie inside the anchor bounds
+        _debugAnchorPoints.Clear();
+        _debugAnchorNormals.Clear();
         for (int i = 0; i < 2; i++)
         {
             Vector3 anchorPoint = anchorPoints[i];
@@ -277,7 +297,11 @@ public class Sliceable : MonoBehaviour
             Vector3 anchorNormal = Vector3.Cross(cutPlaneNormal, originToAnchor) * (i == 0 ? -1 : 1);
             anchorNormal.Normalize();
             anchorBoundNormals[i] = anchorNormal;
+            _debugAnchorPoints.Add(anchorPoint);
+            _debugAnchorNormals.Add(anchorNormal);
         }
+        _debugCutPlaneNormal = cutPlaneNormal;
+        _debugLocalCameraPosition = localCameraPosition;
 
         bool atLeastOneParitionInBounds = false;
         for (int partitionIdx = 0; partitionIdx < 2; partitionIdx++)
@@ -304,21 +328,53 @@ public class Sliceable : MonoBehaviour
             }
             atLeastOneParitionInBounds |= allPartitionVertsInBounds;
         }
+
         if (partitionMeshVerts[BOTTOM_PARTION_IDX].Count == 0 || partitionMeshVerts[TOP_PARTION_IDX].Count == 0)
         {
-            Debug.Log("cannot cut convex polyhedra everything is on a single side");
+            //Debug.Log("cannot cut convex polyhedra everything is on a single side");
             return new SliceInternalResult()
             {
                 canSlice = false,
             };
         }
 
+        Vector3[] smallestCapPointAlongEdge = new Vector3[2];
+        float[] smallestCapPointAlongCutSegmentVal = new float[2] { float.MaxValue, float.MaxValue };
+
+        // now we figure out the line between the "left" of what the player sees and the "right"
+        // this is so we can draw a preview line and then test if there is anything in the way of this segment
+        _debugCandidates.Clear();
+        var screenSpaceAnchorPoints = new Vector2[2];
+        for (int i = 0; i < 2; i++)
+        {
+            screenSpaceAnchorPoints[i] = cam.WorldToScreenPoint(localToWorld.MultiplyPoint(anchorPoints[i]));
+        }
+        foreach (var idx in partitionCapIndexes[TOP_PARTION_IDX])
+        {
+            var vert = partitionMeshVerts[TOP_PARTION_IDX][idx]; ;
+            Vector2 screenSpaceVert = cam.WorldToScreenPoint(localToWorld.MultiplyPoint(vert));
+            _debugCandidates.Add(screenSpaceVert);
+            for (var i = 0; i < 2; i++)
+            {
+                var vertCenteredOnAnchorPoint = screenSpaceVert - screenSpaceAnchorPoints[i];
+                var anchorAcrossEdge = screenSpaceAnchorPoints[(i + 1) % 2] - screenSpaceAnchorPoints[i];
+                var signedDistAlongCutSegment = Vector2.Dot(vertCenteredOnAnchorPoint, anchorAcrossEdge);
+                if (signedDistAlongCutSegment < smallestCapPointAlongCutSegmentVal[i])
+                {
+                    smallestCapPointAlongCutSegmentVal[i] = signedDistAlongCutSegment;
+                    smallestCapPointAlongEdge[i] = vert;
+                }
+            }
+        }
+
         if (!atLeastOneParitionInBounds)
         {
-            Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
+            //Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
             return new SliceInternalResult()
             {
                 canSlice = false,
+                localSliceSegmentStart = smallestCapPointAlongEdge[0],
+                localSliceSegmentEnd = smallestCapPointAlongEdge[1],
             };
         }
 
@@ -327,13 +383,15 @@ public class Sliceable : MonoBehaviour
             partitionMeshVerts = partitionMeshVerts,
             partitionMeshNormals = partitionMeshNormals,
             partitionCapIndexes = partitionCapIndexes,
-            paritionMeshTriangles = paritionMeshTriangles,
+            partitionMeshTriangles = paritionMeshTriangles,
             cutPlaneNormal = cutPlaneNormal,
+            localSliceSegmentStart = smallestCapPointAlongEdge[0],
+            localSliceSegmentEnd = smallestCapPointAlongEdge[1],
             canSlice = true,
         };
     }
 
-    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange)
+    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange, Camera cam)
     {
         var localCameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
         var localStartPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
@@ -342,7 +400,7 @@ public class Sliceable : MonoBehaviour
         var meshFilter = GetComponent<MeshFilter>();
         var meshCollider = GetComponent<MeshCollider>();
 
-        var internalSliceRes = _sliceInternal(meshFilter.sharedMesh, localCameraPosition, localStartPoint, localEndPoint, maxSliceRange);
+        var internalSliceRes = _sliceInternal(_vertices, _triangles, _normals, localCameraPosition, localStartPoint, localEndPoint, maxSliceRange, transform.localToWorldMatrix, cam);
 
         if (!internalSliceRes.canSlice)
         {
@@ -352,7 +410,7 @@ public class Sliceable : MonoBehaviour
         var partitionMeshVerts = internalSliceRes.partitionMeshVerts;
         var partitionMeshNormals = internalSliceRes.partitionMeshNormals;
         var partitionCapIndexes = internalSliceRes.partitionCapIndexes;
-        var partitionMeshTriangles = internalSliceRes.paritionMeshTriangles;
+        var partitionMeshTriangles = internalSliceRes.partitionMeshTriangles;
         var cutPlaneNormal = internalSliceRes.cutPlaneNormal;
 
         // fill holes
@@ -365,7 +423,7 @@ public class Sliceable : MonoBehaviour
             var capBoundIndexes = partitionCapIndexes[partitionIdx];
             if (capBoundIndexes.Count < 1)
             {
-                Debug.Log("no cap bound verts in partition. This is odd");
+                //Debug.Log("no cap bound verts in partition. This is odd");
                 continue;
             }
 
@@ -428,6 +486,8 @@ public class Sliceable : MonoBehaviour
         meshFilter.sharedMesh = topMesh;
         meshCollider.sharedMesh = topMesh;
 
+        RefreshMesh(topMesh);
+
         var secondSliceable = Instantiate(SliceableBodyManager.GetSliceablePrefab(), transform.parent);
         secondSliceable.transform.localPosition = transform.localPosition;
         secondSliceable.transform.localRotation = transform.localRotation;
@@ -438,9 +498,9 @@ public class Sliceable : MonoBehaviour
 
         // handle screwables
         var screwableBody = GetComponent<ScrewableBody>();
-        screwableBody.RefreshMeshVolume();
         if (screwableBody != null)
         {
+            screwableBody.RefreshMeshVolume();
             var secondScrewableBody = secondSliceable.AddComponent<ScrewableBody>();
             secondScrewableBody.density = screwableBody.density;
             secondScrewableBody.RefreshMeshVolume();
@@ -460,10 +520,59 @@ public class Sliceable : MonoBehaviour
         }
     }
 
+    public struct SliceableSectionResult
+    {
+        public Vector3 start;
+        public Vector3 end;
+        public bool canSlice;
+    }
+
+    public SliceableSectionResult GetSliceableSection(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange, Camera cam)
+    {
+        var localCameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
+        var localStartPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
+        var localEndPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(endPoint);
+
+        var internalSliceRes = _sliceInternal(_vertices, _triangles, _normals, localCameraPosition, localStartPoint, localEndPoint, maxSliceRange, transform.localToWorldMatrix, cam);
+
+        if (!internalSliceRes.canSlice)
+        {
+            return new SliceableSectionResult() { canSlice = false };
+        }
+
+        return new SliceableSectionResult()
+        {
+            canSlice = true,
+            start = transform.localToWorldMatrix.MultiplyPoint3x4(internalSliceRes.localSliceSegmentStart),
+            end = transform.localToWorldMatrix.MultiplyPoint3x4(internalSliceRes.localSliceSegmentEnd),
+        };
+    }
+
     private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane)
     {
         var cosBetweenRayAndDown = Vector3.Dot(normalEdgeRayThroughPlane, planeNormal);
         var amountToExtendRay = -signedStartShortestDistToPlane / cosBetweenRayAndDown;
         return edgeStart + normalEdgeRayThroughPlane * amountToExtendRay;
+    }
+
+    private void OnDrawGizmos()
+    {
+        /*Gizmos.matrix = transform.localToWorldMatrix;
+        foreach (var pt in _debugCandidates)
+        {
+            Gizmos.DrawSphere(pt, 0.1f);
+        }
+        for (var i = 0; i < _debugAnchorPoints.Count; i++)
+        {
+            Gizmos.DrawSphere(_debugAnchorPoints[i], 0.1f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugAnchorNormals[i]));
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(_debugLocalCameraPosition, _debugAnchorPoints[i]);
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugCutPlaneNormal));
+            Gizmos.color = Color.white;
+            //Gizmos.DrawRay(new Ray(_debugAnchorPoints[i], _debugCutPlaneNormal * 0.5f));
+        }*/
     }
 }

@@ -11671,10 +11671,6 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 11400004, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
-      propertyPath: PlayerCamera
-      value: 
-      objectReference: {fileID: 1709205326}
-    - target: {fileID: 11400004, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
       propertyPath: ToolNameText
       value: 
       objectReference: {fileID: 1926988548}
@@ -11706,7 +11702,7 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 400000, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
-      insertIndex: 0
+      insertIndex: -1
       addedObject: {fileID: 2067375034}
     - targetCorrespondingSourceObject: {fileID: 400002, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
       insertIndex: -1
@@ -24436,8 +24432,8 @@ Transform:
   m_GameObject: {fileID: 216543229}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.79, y: 1, z: -3.737}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 1, z: -3}
+  m_LocalScale: {x: 0.5, y: 2, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -125878,7 +125874,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 100
-  field of view: 75
+  field of view: 60
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -182193,11 +182189,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 400002, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
   m_PrefabInstance: {fileID: 97983968}
   m_PrefabAsset: {fileID: 0}
---- !u!20 &1709205326 stripped
-Camera:
-  m_CorrespondingSourceObject: {fileID: 2000000, guid: 3d06eed2c97340d58e79665fc1be23c3, type: 3}
-  m_PrefabInstance: {fileID: 97983968}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1709876191
 GameObject:
   m_ObjectHideFlags: 0
@@ -219500,7 +219491,7 @@ Transform:
   m_GameObject: {fileID: 2067375033}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -3.23696, y: -0.44, z: -1.3283}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -219531,8 +219522,7 @@ LineRenderer:
   m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 0}
+  m_Materials: []
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -219563,8 +219553,8 @@ LineRenderer:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: 0.02752304
-        value: 0.10112953
+        time: 0
+        value: 0.06742096
         inSlope: 0
         outSlope: 0
         tangentMode: 0

@@ -7,7 +7,7 @@ using UnityEngine;
 public class FirstPersonPlayer : MonoBehaviour
 {
     public FirstPersonCharacterController Character;
-    public Transform CameraTransform;
+    public Camera PlayerCamera;
     public float LookSensitivity = 2f;
     private float _pitch;
 
@@ -40,10 +40,10 @@ public class FirstPersonPlayer : MonoBehaviour
         Character.SetInputs(ref inputs);
 
         _pitch = Mathf.Clamp(_pitch - look.y, -89f, 89f);
-        CameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+        PlayerCamera.transform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
         activeToolIndex = activeToolIndex % tools.Count;
-        tools[activeToolIndex].ActiveToolUpdate(CameraTransform);
+        tools[activeToolIndex].ActiveToolUpdate(PlayerCamera);
 
         ToolNameText.text = tools[activeToolIndex].GetName();
 
