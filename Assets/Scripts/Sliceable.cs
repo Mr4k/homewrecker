@@ -339,7 +339,6 @@ public class Sliceable : MonoBehaviour
         {
             var vert = partitionMeshVerts[TOP_PARTION_IDX][idx]; ;
             Vector2 screenSpaceVert = cam.WorldToScreenPoint(localToWorld.MultiplyPoint(vert));
-            _debugCandidates.Add(screenSpaceVert);
             for (var i = 0; i < 2; i++)
             {
                 var vertCenteredOnAnchorPoint = screenSpaceVert - screenSpaceAnchorPoints[i];
