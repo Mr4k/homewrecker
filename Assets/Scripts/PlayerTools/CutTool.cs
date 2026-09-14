@@ -45,38 +45,53 @@ public class CutTool : BaseTool
             float sphereRadius = Mathf.Max(
                 (cameraTransform.position - sphereCenter).magnitude,
                 (_startCutPoint - sphereCenter).magnitude,
-                (_endCutPoint - sphereCenter).magnitude);
+                (_endCutPoint - sphereCenter).magnitude) + 1000;
             var colliders = Physics.OverlapSphere(sphereCenter, sphereRadius);
-
 
             if (Input.GetMouseButton(0))
             {
                 Debug.Log("clickking");
                 bool validSliceFound = false;
-                Vector3 earliestSliceableSectionStart = Vector3.zero;
-                Vector3 earliestSliceableSectionEnd = Vector3.zero;
+                float smallestSliceableAngle = float.MaxValue;
+                float largestSliceableAngle = float.MinValue;
+
+                var basis = MathUtils.ComputePlaneBasisForRadialTransform(_startCutPoint, _endCutPoint, cameraTransform.position);
+                Vector3 closestStartPoint = Vector3.zero;
+                Vector3 closestEndPoint = Vector3.zero;
+
+                int numCanSlice = 0;
                 foreach (var col in colliders)
                 {
                     var sliceable = col.gameObject.GetComponent<Sliceable>();
                     if (sliceable != null)
                     {
                         var res = sliceable.GetSliceableSection(cameraTransform.position, _startCutPoint, _endCutPoint, 1000, camera);
+                        float sliceableSmallestPointAngle =
+                            MathUtils.PlanePointToAngle(basis, cameraTransform.position, res.start);
+                        float sliceableLargestPointAngle =
+                            MathUtils.PlanePointToAngle(basis, cameraTransform.position, res.end);
                         if (res.canSlice)
                         {
-                            Debug.Log("can slice");
-                        }
-                        if (res.canSlice)
-                        {
+                            numCanSlice++;
                             validSliceFound = true;
-                            earliestSliceableSectionStart = res.start;
-                            earliestSliceableSectionEnd = res.end;
+                            if (sliceableSmallestPointAngle < smallestSliceableAngle)
+                            {
+                                smallestSliceableAngle = sliceableSmallestPointAngle;
+                                closestStartPoint = res.start;
+                            }
+                            if (sliceableLargestPointAngle > largestSliceableAngle)
+                            {
+                                largestSliceableAngle = sliceableLargestPointAngle;
+                                closestEndPoint = res.end;
+                            }
                         }
                     }
                 }
                 if (validSliceFound)
                 {
-                    SelectedLineRender.SetPositions(new Vector3[] { earliestSliceableSectionStart, earliestSliceableSectionEnd });
+                    SelectedLineRender.SetPositions(new Vector3[] { closestStartPoint, closestEndPoint });
                     SelectedLineRender.positionCount = 2;
+                    Debug.Log("predicted " + numCanSlice + " slices cut " + smallestSliceableAngle + "," + largestSliceableAngle);
                 }
                 else
                 {

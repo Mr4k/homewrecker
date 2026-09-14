@@ -43,6 +43,7 @@ public class Sliceable : MonoBehaviour
         public List<int>[] partitionMeshTriangles;
         public Vector3 localSliceSegmentStart;
         public Vector3 localSliceSegmentEnd;
+        public float localSliceSegmentSignedDistFromStart;
         public Vector3 cutPlaneNormal;
         public bool canSlice;
     }
@@ -325,30 +326,25 @@ public class Sliceable : MonoBehaviour
             };
         }
 
-        Vector3[] smallestCapPointAlongEdge = new Vector3[2];
-        float[] smallestCapPointAlongCutSegmentVal = new float[2] { float.MaxValue, float.MaxValue };
-
-        // now we figure out the line between the "left" of what the player sees and the "right"
-        // this is so we can draw a preview line and then test if there is anything in the way of this segment
-        var screenSpaceAnchorPoints = new Vector2[2];
-        for (int i = 0; i < 2; i++)
-        {
-            screenSpaceAnchorPoints[i] = cam.WorldToScreenPoint(localToWorld.MultiplyPoint(anchorPoints[i]));
-        }
+        var basis = MathUtils.ComputePlaneBasisForRadialTransform(localStartPoint, localEndPoint, localCameraPosition);
+        float smallestSliceableAngle = float.MaxValue;
+        float largestSliceableAngle = float.MinValue;
+        Vector3 closestStartPoint = Vector3.zero;
+        Vector3 closestEndPoint = Vector3.zero;
         foreach (var idx in partitionCapIndexes[TOP_PARTION_IDX])
         {
-            var vert = partitionMeshVerts[TOP_PARTION_IDX][idx]; ;
-            Vector2 screenSpaceVert = cam.WorldToScreenPoint(localToWorld.MultiplyPoint(vert));
-            for (var i = 0; i < 2; i++)
+            var vert = partitionMeshVerts[TOP_PARTION_IDX][idx];
+            float sliceablePointAngle =
+                MathUtils.PlanePointToAngle(basis, localCameraPosition, vert);
+            if (sliceablePointAngle < smallestSliceableAngle)
             {
-                var vertCenteredOnAnchorPoint = screenSpaceVert - screenSpaceAnchorPoints[i];
-                var anchorAcrossEdge = screenSpaceAnchorPoints[(i + 1) % 2] - screenSpaceAnchorPoints[i];
-                var signedDistAlongCutSegment = Vector2.Dot(vertCenteredOnAnchorPoint, anchorAcrossEdge);
-                if (signedDistAlongCutSegment < smallestCapPointAlongCutSegmentVal[i])
-                {
-                    smallestCapPointAlongCutSegmentVal[i] = signedDistAlongCutSegment;
-                    smallestCapPointAlongEdge[i] = vert;
-                }
+                smallestSliceableAngle = sliceablePointAngle;
+                closestStartPoint = vert;
+            }
+            if (sliceablePointAngle > largestSliceableAngle)
+            {
+                largestSliceableAngle = sliceablePointAngle;
+                closestEndPoint = vert;
             }
         }
 
@@ -358,8 +354,8 @@ public class Sliceable : MonoBehaviour
             return new SliceInternalResult()
             {
                 canSlice = false,
-                localSliceSegmentStart = smallestCapPointAlongEdge[0],
-                localSliceSegmentEnd = smallestCapPointAlongEdge[1],
+                localSliceSegmentStart = closestStartPoint,
+                localSliceSegmentEnd = closestEndPoint,
             };
         }
 
@@ -370,8 +366,8 @@ public class Sliceable : MonoBehaviour
             partitionCapIndexes = partitionCapIndexes,
             partitionMeshTriangles = paritionMeshTriangles,
             cutPlaneNormal = cutPlaneNormal,
-            localSliceSegmentStart = smallestCapPointAlongEdge[0],
-            localSliceSegmentEnd = smallestCapPointAlongEdge[1],
+            localSliceSegmentStart = closestStartPoint,
+            localSliceSegmentEnd = closestEndPoint,
             canSlice = true,
         };
     }
