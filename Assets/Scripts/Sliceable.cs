@@ -359,6 +359,20 @@ public class Sliceable : MonoBehaviour
             };
         }
 
+        Vector3 sliceStartPointWorld = localToWorld.MultiplyPoint(closestStartPoint);
+        Vector3 sliceEndPointWorld = localToWorld.MultiplyPoint(closestEndPoint);
+        Vector3 cameraPositionWorld = localToWorld.MultiplyPoint(localCameraPosition);
+
+        if (SliceableAreaOccluded(GetComponent<MeshCollider>(), cameraPositionWorld, sliceStartPointWorld, sliceEndPointWorld, 5))
+        {
+            return new SliceInternalResult()
+            {
+                canSlice = false,
+                localSliceSegmentStart = closestStartPoint,
+                localSliceSegmentEnd = closestEndPoint,
+            };
+        }
+
         return new SliceInternalResult()
         {
             partitionMeshVerts = partitionMeshVerts,
@@ -506,6 +520,46 @@ public class Sliceable : MonoBehaviour
         public Vector3 start;
         public Vector3 end;
         public bool canSlice;
+    }
+
+    public bool SliceableAreaOccluded(Collider convexCollder, Vector3 worldSpaceCameraPosition, Vector3 worldSpaceStart, Vector3 worldSpaceEnd, int maxRecursion)
+    {
+        // for now do a dumb solution where we run a few raycasts for each object
+        // not exact and might miss occulders
+        // if this ends up sucking we can do a different kind of solution where we 
+        // do a render pass with object ids and use those to cull
+        Vector3 cameraToStart = worldSpaceStart - worldSpaceCameraPosition;
+        Vector3 cameraToEnd = worldSpaceEnd - worldSpaceCameraPosition;
+        var queue = new Queue<Tuple<int, float>>();
+        queue.Enqueue(Tuple.Create(0, 0.5f));
+        while (queue.Count > 0)
+        {
+            var cast = queue.Dequeue();
+            var rayDir = Vector3.Lerp(cameraToStart, cameraToEnd, cast.Item2);
+            RaycastHit hitInfo;
+            Physics.Raycast(new Ray(worldSpaceCameraPosition, rayDir.normalized), out hitInfo);
+            if (hitInfo.collider != null && hitInfo.collider != convexCollder)
+            {
+                var sb = hitInfo.collider.gameObject.GetComponent<ScrewableBody>();
+                var tsb = gameObject.GetComponent<ScrewableBody>();
+                if (sb != null && tsb != null)
+                {
+                    Debug.Log("hit collider" + sb.Id + " which is not equal to " + tsb.Id);
+                }
+                if (hitInfo.distance < rayDir.magnitude - 1.0f)
+                {
+                    return true;
+                }
+            }
+            if (cast.Item1 < maxRecursion)
+            {
+                int nextRecursiveDepth = cast.Item1 + 1;
+                float denom = 2 << nextRecursiveDepth;
+                queue.Enqueue(Tuple.Create(nextRecursiveDepth, cast.Item2 + 1.0f / denom));
+                queue.Enqueue(Tuple.Create(nextRecursiveDepth, cast.Item2 - 1.0f / denom));
+            }
+        }
+        return false;
     }
 
     public SliceableSectionResult GetSliceableSection(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange, Camera cam)
