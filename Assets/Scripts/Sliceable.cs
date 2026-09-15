@@ -540,12 +540,7 @@ public class Sliceable : MonoBehaviour
             Physics.Raycast(new Ray(worldSpaceCameraPosition, rayDir.normalized), out hitInfo);
             if (hitInfo.collider != null && hitInfo.collider != convexCollder)
             {
-                var sb = hitInfo.collider.gameObject.GetComponent<ScrewableBody>();
-                var tsb = gameObject.GetComponent<ScrewableBody>();
-                if (sb != null && tsb != null)
-                {
-                    Debug.Log("hit collider" + sb.Id + " which is not equal to " + tsb.Id);
-                }
+                // TODO externalize the -1.0f threshold into a global constant
                 if (hitInfo.distance < rayDir.magnitude - 1.0f)
                 {
                     return true;
