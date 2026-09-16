@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
@@ -43,13 +44,16 @@ public class Sliceable : MonoBehaviour
         public List<int>[] partitionMeshTriangles;
         public Vector3 localSliceSegmentStart;
         public Vector3 localSliceSegmentEnd;
-        public float localSliceSegmentSignedDistFromStart;
+        public float[] closestPointsToParitionPlane;
         public Vector3 cutPlaneNormal;
         public bool canSlice;
     }
 
     private SliceInternalResult _sliceInternal(List<Vector3> vertices, List<int> triangles, List<Vector3> normals, Vector3 localCameraPosition, Vector3 localStartPoint, Vector3 localEndPoint, float maxSliceRange, Matrix4x4 localToWorld, Camera cam)
     {
+        // TODO we have an issue if the player ever somehow cuts exactly through a vertex
+        // something weird is probably gonna happen
+
         // construct the side bounds
         Vector3[] anchorBoundNormals = new Vector3[2];
         Vector3[] anchorPoints = new Vector3[]
@@ -66,14 +70,26 @@ public class Sliceable : MonoBehaviour
         // assuming the mesh is convex then that means the cut wasn't all the way through?
 
         Dictionary<int, float> signedVertDistAlongCutNormal = new Dictionary<int, float>();
+        float smallestPositiveSignedDistance = float.MaxValue;
+        float largestNegativeSignedDistance = float.MinValue;
         for (var i = 0; i < vertices.Count; i++)
         {
             Vector3 vert = vertices[i];
             // figure out which side of the cut plane we are on
             Vector3 vertFromStart = vert - localStartPoint;
             float signedDistanceAlongCutNormal = Vector3.Dot(vertFromStart, cutPlaneNormal);
+            if (signedDistanceAlongCutNormal >= 0)
+            {
+                smallestPositiveSignedDistance = Math.Min(signedDistanceAlongCutNormal, smallestPositiveSignedDistance);
+            }
+            if (signedDistanceAlongCutNormal <= 0)
+            {
+                largestNegativeSignedDistance = Math.Max(signedDistanceAlongCutNormal, largestNegativeSignedDistance);
+            }
             signedVertDistAlongCutNormal.Add(i, signedDistanceAlongCutNormal);
         }
+
+        float[] distanceAlongCutPlaneToClosetVertexInPartition = new float[2] { smallestPositiveSignedDistance, largestNegativeSignedDistance };
 
         // cut the mesh
         // broken verts will form the faces we need to construct
@@ -160,6 +176,11 @@ public class Sliceable : MonoBehaviour
             {
                 var smallPartitionVerts = partitionMeshVerts[smallerSubsetPartitionIdx];
                 var smallPartitionNormals = partitionMeshNormals[smallerSubsetPartitionIdx];
+                // account for the width of the saw and cut out a little material in the middle
+                // we do this by not moving the cap verts all the way to the plane
+                float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[smallerSubsetPartitionIdx];
+                float maxUnsignedSmallPartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
+                var smallPartitionVertsRetractionAmount = Math.Min(maxUnsignedSmallPartitionVertsRetractionAmount, 0.05f) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[smallerSubsetPartitionIdx];
                 var partitionTriangles = paritionMeshTriangles[smallerSubsetPartitionIdx];
@@ -186,7 +207,7 @@ public class Sliceable : MonoBehaviour
                     var edgeEndVert = vertices[edgeEndIdx];
                     var edgeRayTorwardsPlane = edgeEndVert - edgeStartVert;
 
-                    var projectedVert = clampEdgeAtPlane(edgeStartVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[edgeStartIdx]);
+                    var projectedVert = clampEdgeAtPlane(edgeStartVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[edgeStartIdx], smallPartitionVertsRetractionAmount);
                     smallPartitionVerts.Add(projectedVert);
                     // in a really sick implementation this would interpolate the normal along the edge
                     // but for now I'm being lazy and assuming the normals will be consistent across the face
@@ -208,6 +229,11 @@ public class Sliceable : MonoBehaviour
             {
                 var largePartitionVerts = partitionMeshVerts[largerSubsetParitionIdx];
                 var largePartitionNormals = partitionMeshNormals[largerSubsetParitionIdx];
+                // account for the width of the saw and cut out a little material in the middle
+                // we do this by not moving the cap verts all the way to the plane
+                float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[largerSubsetParitionIdx];
+                float maxUnsignedLargePartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
+                var largePartitionVertsRetractionAmount = Math.Min(maxUnsignedLargePartitionVertsRetractionAmount, 0.05f) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
                 var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
@@ -227,7 +253,7 @@ public class Sliceable : MonoBehaviour
                         var prevNormal = normals[prevVertexIdx];
                         var edgeRayTorwardsPlane = prevVert - currVertex;
                         // project the other side vert
-                        var projectedVert = clampEdgeAtPlane(currVertex, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[currVertexIdx]);
+                        var projectedVert = clampEdgeAtPlane(currVertex, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[currVertexIdx], largePartitionVertsRetractionAmount);
                         largePartitionVerts.Add(projectedVert);
                         // in a really sick implementation this would interpolate the normal along the edge
                         // but for now I'm being lazy and assuming the normals will be consistent across the face
@@ -241,7 +267,7 @@ public class Sliceable : MonoBehaviour
                         var prevVert = vertices[prevVertexIdx];
                         var edgeRayTorwardsPlane = currVertex - prevVert;
                         // project the other side vert
-                        var projectedVert = clampEdgeAtPlane(prevVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[prevVertexIdx]);
+                        var projectedVert = clampEdgeAtPlane(prevVert, edgeRayTorwardsPlane.normalized, cutPlaneNormal, signedVertDistAlongCutNormal[prevVertexIdx], largePartitionVertsRetractionAmount);
                         largePartitionVerts.Add(projectedVert);
                         // in a really sick implementation this would interpolate the normal along the edge
                         // but for now I'm being lazy and assuming the normals will be consistent across the face
@@ -326,6 +352,7 @@ public class Sliceable : MonoBehaviour
             };
         }
 
+        // note this needs to move to be computed before the cleave
         var basis = MathUtils.ComputePlaneBasisForRadialTransform(localStartPoint, localEndPoint, localCameraPosition);
         float smallestSliceableAngle = float.MaxValue;
         float largestSliceableAngle = float.MinValue;
@@ -382,6 +409,7 @@ public class Sliceable : MonoBehaviour
             cutPlaneNormal = cutPlaneNormal,
             localSliceSegmentStart = closestStartPoint,
             localSliceSegmentEnd = closestEndPoint,
+            closestPointsToParitionPlane = new float[2] { smallestPositiveSignedDistance, math.abs(largestNegativeSignedDistance) },
             canSlice = true,
         };
     }
@@ -407,6 +435,7 @@ public class Sliceable : MonoBehaviour
         var partitionCapIndexes = internalSliceRes.partitionCapIndexes;
         var partitionMeshTriangles = internalSliceRes.partitionMeshTriangles;
         var cutPlaneNormal = internalSliceRes.cutPlaneNormal;
+        var minVertexDistanceFromCutPlane = internalSliceRes.closestPointsToParitionPlane;
 
         // fill holes
         // note we rely heavily on this mesh being convex
@@ -522,7 +551,7 @@ public class Sliceable : MonoBehaviour
         public bool canSlice;
     }
 
-    public bool SliceableAreaOccluded(Collider convexCollder, Vector3 worldSpaceCameraPosition, Vector3 worldSpaceStart, Vector3 worldSpaceEnd, int maxRecursion)
+    private bool SliceableAreaOccluded(Collider convexCollder, Vector3 worldSpaceCameraPosition, Vector3 worldSpaceStart, Vector3 worldSpaceEnd, int maxRecursion)
     {
         // for now do a dumb solution where we run a few raycasts for each object
         // not exact and might miss occulders
@@ -578,10 +607,10 @@ public class Sliceable : MonoBehaviour
         };
     }
 
-    private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane)
+    private Vector3 clampEdgeAtPlane(Vector3 edgeStart, Vector3 normalEdgeRayThroughPlane, Vector3 planeNormal, float signedStartShortestDistToPlane, float signedAmountToPushAwayFromPlane)
     {
         var cosBetweenRayAndDown = Vector3.Dot(normalEdgeRayThroughPlane, planeNormal);
-        var amountToExtendRay = -signedStartShortestDistToPlane / cosBetweenRayAndDown;
+        var amountToExtendRay = -(signedStartShortestDistToPlane - signedAmountToPushAwayFromPlane) / cosBetweenRayAndDown;
         return edgeStart + normalEdgeRayThroughPlane * amountToExtendRay;
     }
 }
