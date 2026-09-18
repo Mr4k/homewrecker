@@ -28,6 +28,15 @@ public class Sliceable : MonoBehaviour
         RefreshMesh(meshFilter.sharedMesh);
     }
 
+    public void SetupMesh(Mesh mesh)
+    {
+        var meshFilter = GetComponent<MeshFilter>();
+        var meshCollider = GetComponent<MeshCollider>();
+        meshFilter.sharedMesh = mesh;
+        meshCollider.sharedMesh = mesh;
+        RefreshMesh(mesh);
+    }
+
     private void RefreshMesh(Mesh mesh)
     {
         mesh.GetVertices(_vertices);

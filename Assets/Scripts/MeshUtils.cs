@@ -3,6 +3,27 @@ using UnityEngine;
 
 public class MeshUtils
 {
+    public static Mesh GetScaledMesh(Mesh baseMesh, Vector3 scale)
+    {
+        var newMesh = new Mesh();
+        newMesh.name = baseMesh.name + "_Scaled";
+
+        Vector3[] vertices = baseMesh.vertices;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            vertices[i] = Vector3.Scale(vertices[i], scale);
+        }
+        newMesh.vertices = vertices;
+        newMesh.triangles = baseMesh.triangles;
+        newMesh.uv = baseMesh.uv;
+        newMesh.normals = baseMesh.normals;
+        newMesh.colors = baseMesh.colors;
+
+        newMesh.RecalculateBounds();
+        newMesh.RecalculateNormals();
+
+        return newMesh;
+    }
     public static float VolumeOfMesh(Mesh mesh, Matrix4x4 localToWorldMatrix)
     {
         float signedVolume = 0.0f;

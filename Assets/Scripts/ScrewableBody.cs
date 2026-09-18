@@ -192,6 +192,10 @@ public class ScrewableBody : MonoBehaviour
         Id = IncrementId();
         AllBodies.Add(Id, this);
         RefreshMeshVolume();
+        if (transform.localScale != Vector3.one)
+        {
+            throw new Exception("screwable scale is not one!");
+        }
     }
 
     public int IncrementId()

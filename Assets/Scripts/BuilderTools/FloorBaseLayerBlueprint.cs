@@ -69,6 +69,14 @@ class FloorBaseLayerBlueprint : BaseBlueprint
         }
     }
 
+    public Sliceable CreateWoodenCube(Transform parent, Vector3 localPosition, Vector3 size)
+    {
+        var obj = Instantiate(WoodenPlankPrefab, parent);
+        obj.transform.localPosition = localPosition;
+        obj.SetupMesh(MeshUtils.GetScaledMesh(MeshHub.GetCubeMesh(), size));
+        return obj;
+    }
+
     public override void RefreshBlueprint()
     {
         var outputContainer = GetComponentInChildren<BlueprintOutputContainer>();
@@ -118,9 +126,11 @@ class FloorBaseLayerBlueprint : BaseBlueprint
                     width /= 2;
                     centerAdj -= width / 2;
                 }
-                var supportBeam = Instantiate(WoodenPlankPrefab, supportBeamContainerGameObject.transform);
-                supportBeam.transform.localPosition = new Vector3(nextX + centerAdj, 0, FloorboardDepth + supportBeamDepth / 2f - FloorSize.z / 2);
-                supportBeam.transform.localScale = new Vector3(width, FloorSize.y, supportBeamDepth);
+                var supportBeam = CreateWoodenCube(
+                    supportBeamContainerGameObject.transform,
+                    new Vector3(nextX + centerAdj, 0, FloorboardDepth + supportBeamDepth / 2f - FloorSize.z / 2),
+                    new Vector3(width, FloorSize.y, supportBeamDepth)
+                );
                 nextX += FloorboardWidth + spacerWidth;
                 supportBeamsInOrder.Add(supportBeam.gameObject.GetComponent<ScrewableBody>());
             }
@@ -132,9 +142,14 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             for (int x = 0; x < FloorWidthInFloorboards; x++)
             {
                 var width = SupportBeamWidthAsAPercentageOfAsPercentageOfFloorboardWidth * FloorboardWidth;
-                var supportBeam = Instantiate(WoodenPlankPrefab, supportBeamContainerGameObject.transform);
+                /*var supportBeam = Instantiate(WoodenPlankPrefab, supportBeamContainerGameObject.transform);
                 supportBeam.transform.localPosition = new Vector3(nextX, 0, FloorboardDepth + supportBeamDepth / 2f - FloorSize.z / 2);
-                supportBeam.transform.localScale = new Vector3(width, FloorSize.y, supportBeamDepth);
+                supportBeam.transform.localScale = new Vector3(width, FloorSize.y, supportBeamDepth);*/
+                var supportBeam = CreateWoodenCube(
+                    supportBeamContainerGameObject.transform,
+                    new Vector3(nextX, 0, FloorboardDepth + supportBeamDepth / 2f - FloorSize.z / 2),
+                    new Vector3(width, FloorSize.y, supportBeamDepth)
+                );
                 nextX += FloorboardWidth + spacerWidthHalf;
                 supportBeamsInOrder.Add(supportBeam.gameObject.GetComponent<ScrewableBody>());
             }
@@ -167,9 +182,15 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             if (y % 2 == 1)
             {
                 // use a half Floorboard at the start and end
-                var halfFloorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
+                /*var halfFloorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
                 halfFloorboard.transform.localScale = new Vector3(FloorboardWidth / 2, FloorboardHeight, FloorboardDepth);
-                halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
+                halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);*/
+                var halfFloorboard = CreateWoodenCube(
+                    floorboardContainerGameObject.transform,
+                    new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2),
+                    new Vector3(FloorboardWidth / 2, FloorboardHeight, FloorboardDepth)
+                );
+
                 nextX += FloorboardWidth / 2 + rowSpacerWidth;
                 numHorizontalFloorboards -= 1;
                 CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
@@ -178,9 +199,14 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             }
             for (int x = 0; x < numHorizontalFloorboards; x++)
             {
-                var Floorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
+                /*var Floorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
                 Floorboard.transform.localScale = new Vector3(FloorboardWidth, FloorboardHeight, FloorboardDepth);
-                Floorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 2, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
+                Floorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 2, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);*/
+                var Floorboard = CreateWoodenCube(
+                    floorboardContainerGameObject.transform,
+                    new Vector3(nextX + FloorboardWidth / 2, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2),
+                    new Vector3(FloorboardWidth, FloorboardHeight, FloorboardDepth)
+                );
                 nextX += FloorboardWidth + rowSpacerWidth;
                 CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, false);
                 CreateFloorBoardScrew(floorboardContainerGameObject.transform, Floorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 2], Floorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, false);
@@ -189,9 +215,14 @@ class FloorBaseLayerBlueprint : BaseBlueprint
             if (y % 2 == 1)
             {
                 // use a half Floorboard at the start and end
-                var halfFloorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
+                /*var halfFloorboard = Instantiate(WoodenPlankPrefab, floorboardContainerGameObject.transform);
                 halfFloorboard.transform.localScale = new Vector3(FloorboardWidth / 2, FloorboardHeight, FloorboardDepth);
-                halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);
+                halfFloorboard.transform.localPosition = new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2);*/
+                var halfFloorboard = CreateWoodenCube(
+                    floorboardContainerGameObject.transform,
+                    new Vector3(nextX + FloorboardWidth / 4, nextY + FloorboardHeight / 2, -FloorSize.z / 2 + FloorboardDepth / 2),
+                    new Vector3(FloorboardWidth / 2, FloorboardHeight, FloorboardDepth)
+                );
                 CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, 1, true);
                 CreateFloorBoardScrew(floorboardContainerGameObject.transform, halfFloorboard.GetComponent<ScrewableBody>(), supportBeamsInOrder[currSupportBeamIdx + 1], halfFloorboard.transform.localPosition, FloorboardWidth, FloorboardHeight, -1, true);
             }
