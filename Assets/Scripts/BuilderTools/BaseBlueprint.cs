@@ -8,6 +8,7 @@ public abstract class BaseBlueprint : MonoBehaviour
     public abstract void RefreshBlueprint();
 }
 
+// Based on: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorTools.EditorTool.html
 // The second argument in the EditorToolAttribute flags this as a Component tool. That means that it will be instantiated
 // and destroyed along with the selection. EditorTool.targets will contain the selected objects matching the type.
 [EditorTool("BlueprintTool", typeof(BaseBlueprint))]

@@ -189,7 +189,7 @@ public class Sliceable : MonoBehaviour
                 // we do this by not moving the cap verts all the way to the plane
                 float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[smallerSubsetPartitionIdx];
                 float maxUnsignedSmallPartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
-                var smallPartitionVertsRetractionAmount = Math.Min(maxUnsignedSmallPartitionVertsRetractionAmount, 0.05f) * Math.Sign(closestDistanceToVertex);
+                var smallPartitionVertsRetractionAmount = Math.Min(maxUnsignedSmallPartitionVertsRetractionAmount, 0.0f) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[smallerSubsetPartitionIdx];
                 var partitionTriangles = paritionMeshTriangles[smallerSubsetPartitionIdx];
@@ -242,7 +242,7 @@ public class Sliceable : MonoBehaviour
                 // we do this by not moving the cap verts all the way to the plane
                 float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[largerSubsetParitionIdx];
                 float maxUnsignedLargePartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
-                var largePartitionVertsRetractionAmount = Math.Min(maxUnsignedLargePartitionVertsRetractionAmount, 0.05f) * Math.Sign(closestDistanceToVertex);
+                var largePartitionVertsRetractionAmount = Math.Min(maxUnsignedLargePartitionVertsRetractionAmount, 0) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
                 var partitionTriangles = paritionMeshTriangles[largerSubsetParitionIdx];
@@ -399,7 +399,7 @@ public class Sliceable : MonoBehaviour
         Vector3 sliceEndPointWorld = localToWorld.MultiplyPoint(closestEndPoint);
         Vector3 cameraPositionWorld = localToWorld.MultiplyPoint(localCameraPosition);
 
-        if (SliceableAreaOccluded(GetComponent<MeshCollider>(), cameraPositionWorld, sliceStartPointWorld, sliceEndPointWorld, 5))
+        /*if (SliceableAreaOccluded(GetComponent<MeshCollider>(), cameraPositionWorld, sliceStartPointWorld, sliceEndPointWorld, 5))
         {
             return new SliceInternalResult()
             {
@@ -407,7 +407,7 @@ public class Sliceable : MonoBehaviour
                 localSliceSegmentStart = closestStartPoint,
                 localSliceSegmentEnd = closestEndPoint,
             };
-        }
+        }*/
 
         return new SliceInternalResult()
         {
@@ -562,6 +562,7 @@ public class Sliceable : MonoBehaviour
 
     private bool SliceableAreaOccluded(Collider convexCollder, Vector3 worldSpaceCameraPosition, Vector3 worldSpaceStart, Vector3 worldSpaceEnd, int maxRecursion)
     {
+        return false;
         // for now do a dumb solution where we run a few raycasts for each object
         // not exact and might miss occulders
         // if this ends up sucking we can do a different kind of solution where we 
