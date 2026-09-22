@@ -21,12 +21,12 @@ Shader "BlitWithMaterial"
                // this is needed so we account XR platform differences in how they handle texture arrays
                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-               // sample the texture using the SAMPLE_TEXTURE2D_X_LOD
+               // sample the texture using the SAMPLE_TEXTURE2D
                float2 uv = input.texcoord.xy;
-               half4 color = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearRepeat, uv, _BlitMipLevel);
+               half4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_PointClamp, uv);
                
                // Modify the sampled color
-               return half4(0, 1, 0, 1) * color;
+               return half4(1, 0, 0, 1) * color;
            }
 
            ENDHLSL

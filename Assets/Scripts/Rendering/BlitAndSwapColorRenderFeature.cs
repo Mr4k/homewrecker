@@ -18,10 +18,13 @@ public class BlitAndSwapColorPass : ScriptableRenderPass
     // Material used in the blit operation.
     Material m_BlitMaterial;
 
+    int _renderWidth;
+
     // Function used to transfer the material from the renderer feature to the render pass.
-    public void Setup(Material mat)
+    public void Setup(int renderWidth, Material mat)
     {
         m_BlitMaterial = mat;
+        _renderWidth = renderWidth;
 
         // The pass will read the current color texture. That needs to be an intermediate texture. It's not supported to use the BackBuffer as input texture. 
         // By setting this property, URP will automatically create an intermediate texture. This has a performance cost so don't set this if you don't need it.
@@ -51,10 +54,18 @@ public class BlitAndSwapColorPass : ScriptableRenderPass
         var destinationDesc = renderGraph.GetTextureDesc(source);
         destinationDesc.name = $"CameraColor-{m_PassName}";
         destinationDesc.clearBuffer = false;
+        destinationDesc.filterMode = FilterMode.Point;
         TextureHandle destination = renderGraph.CreateTexture(destinationDesc);
+        var intermediateSmallBufferDesc = renderGraph.GetTextureDesc(source);
+        intermediateSmallBufferDesc.width = _renderWidth;
+        intermediateSmallBufferDesc.height = (int)((float)destinationDesc.height / (float)destinationDesc.width * _renderWidth);
+        intermediateSmallBufferDesc.filterMode = FilterMode.Point;
+        TextureHandle intermediateSmallBuffer = renderGraph.CreateTexture(intermediateSmallBufferDesc);
 
-        RenderGraphUtils.BlitMaterialParameters para = new(source, destination, m_BlitMaterial, 0);
+        RenderGraphUtils.BlitMaterialParameters para = new(source, intermediateSmallBuffer, m_BlitMaterial, 0);
         renderGraph.AddBlitPass(para, passName: m_PassName);
+        RenderGraphUtils.BlitMaterialParameters para2 = new(intermediateSmallBuffer, destination, m_BlitMaterial, 0);
+        renderGraph.AddBlitPass(para2, passName: m_PassName + "2");
 
         // FrameData allows to get and set internal pipeline buffers. Here we update the CameraColorBuffer to the texture that we just wrote to in this pass. 
         // Because RenderGraph manages the pipeline resources and dependencies, following up passes will correctly use the right color buffer.
@@ -71,6 +82,8 @@ public class BlitAndSwapColorRendererFeature : ScriptableRendererFeature
 
     [Tooltip("The event where to inject the pass.")]
     public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+
+    public int RenderWidth = 200;
 
     BlitAndSwapColorPass m_Pass;
 
@@ -94,7 +107,7 @@ public class BlitAndSwapColorRendererFeature : ScriptableRendererFeature
             return;
         }
 
-        m_Pass.Setup(material);
+        m_Pass.Setup(RenderWidth, material);
         renderer.EnqueuePass(m_Pass);
     }
 }

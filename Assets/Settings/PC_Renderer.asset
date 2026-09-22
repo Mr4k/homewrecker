@@ -71,6 +71,7 @@ MonoBehaviour:
   m_Active: 1
   material: {fileID: 2100000, guid: c7bd8acd22ec244bdbdf6278e290cd88, type: 2}
   renderPassEvent: 600
+  RenderWidth: 640
 --- !u!114 &5931325012308461332
 MonoBehaviour:
   m_ObjectHideFlags: 0
