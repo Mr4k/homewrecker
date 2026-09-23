@@ -17,13 +17,15 @@ public class BlitAndSwapColorPass : ScriptableRenderPass
 
     // Material used in the blit operation.
     Material m_BlitMaterial;
+    Material m_PureBlitMaterial;
 
     int _renderWidth;
 
     // Function used to transfer the material from the renderer feature to the render pass.
-    public void Setup(int renderWidth, Material mat)
+    public void Setup(int renderWidth, Material mat, Material pureBlitMaterial)
     {
         m_BlitMaterial = mat;
+        m_PureBlitMaterial = pureBlitMaterial;
         _renderWidth = renderWidth;
 
         // The pass will read the current color texture. That needs to be an intermediate texture. It's not supported to use the BackBuffer as input texture. 
@@ -62,8 +64,11 @@ public class BlitAndSwapColorPass : ScriptableRenderPass
         intermediateSmallBufferDesc.filterMode = FilterMode.Point;
         TextureHandle intermediateSmallBuffer = renderGraph.CreateTexture(intermediateSmallBufferDesc);
 
-        RenderGraphUtils.BlitMaterialParameters para = new(source, intermediateSmallBuffer, m_BlitMaterial, 0);
+        // if we sample from the source it does a linear interp b/c source does not have point sampling on?
+        // or maybe this is a mip mapping thing?
+        RenderGraphUtils.BlitMaterialParameters para = new(source, intermediateSmallBuffer, m_PureBlitMaterial, 0);
         renderGraph.AddBlitPass(para, passName: m_PassName);
+        // we blit up to the bigger image. This is wasteful of gpu power but works for now
         RenderGraphUtils.BlitMaterialParameters para2 = new(intermediateSmallBuffer, destination, m_BlitMaterial, 0);
         renderGraph.AddBlitPass(para2, passName: m_PassName + "2");
 
@@ -79,6 +84,8 @@ public class BlitAndSwapColorRendererFeature : ScriptableRendererFeature
 {
     [Tooltip("The material used when making the blit operation.")]
     public Material material;
+
+    public Material pureBlitMaterial;
 
     [Tooltip("The event where to inject the pass.")]
     public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
@@ -107,7 +114,7 @@ public class BlitAndSwapColorRendererFeature : ScriptableRendererFeature
             return;
         }
 
-        m_Pass.Setup(RenderWidth, material);
+        m_Pass.Setup(RenderWidth, material, pureBlitMaterial);
         renderer.EnqueuePass(m_Pass);
     }
 }

@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ScreenTint
-  m_Shader: {fileID: 4800000, guid: 260e48b55878e4208963bb4ec037f33c, type: 3}
+  m_Name: ScreenFlatBlit
+  m_Shader: {fileID: 4800000, guid: 88a1b5b8f4b5f4fa5846e9435b65e6fc, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
