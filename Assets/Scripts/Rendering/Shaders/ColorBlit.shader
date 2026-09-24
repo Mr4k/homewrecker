@@ -2,6 +2,7 @@ Shader "BlitWithMaterial"
 {
     Properties {
         _Palette("Palette", 2D) = "white" {}
+        _DitherPattern("Dither Pattern", 2D) = "white" {}
         _NumColors("Num Colors", Integer) = 0
     }
     SubShader
@@ -23,6 +24,12 @@ Shader "BlitWithMaterial"
 
             TEXTURE2D(_Palette);
             int _NumColors;
+            TEXTURE2D(_DitherPattern);
+            int _DitherBoxSize;
+            float4 _DitherPattern_TexelSize;
+            SamplerState s1_point_clamp_sampler; 
+            SamplerState s2_point_clamp_sampler; 
+            SamplerState s3_point_repeat_sampler; 
 
             static float _DitherMask[8][8] = {
                 {0.0, 0.5, 0.125, 0.625, 0.03125, 0.53125, 0.15625, 0.65625},
@@ -45,24 +52,31 @@ Shader "BlitWithMaterial"
                 float2 uv = input.texcoord.xy;
                 float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_PointClamp, uv);
                 float grey = pow(1.0 - saturate(0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b), 3.2);
+                
                 // colors go light -> dark so x = 0 is brightest color
-                half4 colorAbove = SAMPLE_TEXTURE2D(_Palette, sampler_PointClamp, float2(floor(grey * _NumColors) / _NumColors + 0.5 / _NumColors, 0));
-                half4 colorBelow = SAMPLE_TEXTURE2D(_Palette, sampler_PointClamp, float2(ceil(grey * _NumColors) / _NumColors + 0.5 / _NumColors, 0));
-                //half4 colorAbove = half4(1, 1, 1, 1);
-                //half4 colorBelow = half4(0, 0, 0, 1);
+                half4 colorAbove = SAMPLE_TEXTURE2D(_Palette, s1_point_clamp_sampler, float2(floor(grey * _NumColors) / _NumColors + 0.5 / _NumColors, 0));
+                half4 colorBelow = SAMPLE_TEXTURE2D(_Palette, s2_point_clamp_sampler, float2(ceil(grey * _NumColors) / _NumColors + 0.5 / _NumColors, 0));
+
+                float bayerX = uv.x * _BlitTexture_TexelSize.z * _DitherPattern_TexelSize.x;
+                float bayerY = uv.y * _BlitTexture_TexelSize.w * _DitherPattern_TexelSize.y;
+
+                int bayerX2 = (int)(uv.x * _BlitTexture_TexelSize.z) % 8;
+                int bayerY2 = (int)(uv.y * _BlitTexture_TexelSize.w) % 8;
+
+                half4 bayerSample = SAMPLE_TEXTURE2D(_DitherPattern, s3_point_repeat_sampler, float2(bayerX, bayerY));
 
                 float colorFrac = 1.0 - frac(grey * _NumColors);
-                int bayerX = (int)(uv.x * _BlitTexture_TexelSize.z) % 8;
-                int bayerY = (int)(uv.y * _BlitTexture_TexelSize.w) % 8;
-                if (colorFrac > _DitherMask[bayerY][bayerX]) {
+                //colorAbove = float4(1, 1, 1, 1);
+                //colorBelow = float4(0,0,0,0);
+                //if (bayerSample.r < 0.001) {
+                //    return float4(1, 0, 0, 0);
+                //}
+                //return abs(bayerSample.r) * float4(1, 1, 1, 1);
+                if (colorFrac > bayerSample.r) {
+                //if (uv.x > _DitherMask[bayerX2][bayerY2]) {
                     return colorAbove;
                 }
                 return colorBelow;
-                //return float4(0, 0, 0, 1);
-                //if (colorFrac > 0.5) {
-                //    return float4(1, 0, 0, 1) * colorFrac;
-                //}
-                //return float4(1, 1, 1, 1) * abs(grey - _DitherMask[bayerY][bayerX]);
             }
 
             ENDHLSL

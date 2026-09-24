@@ -72,7 +72,7 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: c7bd8acd22ec244bdbdf6278e290cd88, type: 2}
   pureBlitMaterial: {fileID: 2100000, guid: 348f85bd478a8413aa9545df5ba1a45a, type: 2}
   renderPassEvent: 600
-  RenderWidth: 480
+  RenderWidth: 500
 --- !u!114 &5931325012308461332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85,7 +85,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f62c9c65cf3354c93be831c8bc075510, type: 3}
   m_Name: ScreenSpaceAmbientOcclusion
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion
-  m_Active: 1
+  m_Active: 0
   m_Settings:
     AOMethod: 0
     Downsample: 0
