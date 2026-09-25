@@ -18,6 +18,8 @@ public class CutTool : BaseTool
     public Vector3 LocalSliceableCutNormal;
     public Vector3 LocalSliceableCutDirection;
     public Plane SlicePlane;
+    public GameObject CutEye;
+    public GameObject CutPupil;
 
     public override void ActiveToolUpdate(Camera camera)
     {
@@ -37,7 +39,15 @@ public class CutTool : BaseTool
                         var highlightable = sliceable.gameObject.GetComponent<Highlightable>();
                         LocalSliceableCutNormal = sliceable.transform.worldToLocalMatrix.MultiplyVector(hit.normal);
                         LocalSliceableCutOrigin = sliceable.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
-                        SlicePlane = new Plane(LocalSliceableCutNormal, LocalSliceableCutOrigin);
+                        // Note we should really rebuilt this so it says relevant if the local space shifts
+                        SlicePlane = new Plane(
+                            sliceable.transform.localToWorldMatrix.MultiplyVector(LocalSliceableCutNormal),
+                            sliceable.transform.localToWorldMatrix.MultiplyPoint(LocalSliceableCutOrigin)
+                        );
+
+                        CutEye.transform.position = hit.point;
+                        CutEye.transform.SetParent(SelectedCuttable.transform, true);
+
                         if (highlightable != null)
                         {
                             highlightable.Select();
@@ -45,14 +55,27 @@ public class CutTool : BaseTool
                     }
                 }
             }
-            else
+        }
+        else if (Input.GetMouseButton(0))
+        {
+            if (SelectedCuttable != null)
             {
+                SlicePlane.SetNormalAndPosition(
+                    SelectedCuttable.transform.localToWorldMatrix.MultiplyVector(LocalSliceableCutNormal),
+                    SelectedCuttable.transform.localToWorldMatrix.MultiplyPoint(LocalSliceableCutOrigin)
+                );
+                float r = SelectedCuttable.gameObject.GetComponent<MeshCollider>().bounds.size.magnitude;
                 // look for intersection point with the plane
                 var eyeRay = new Ray(camera.transform.position, camera.transform.forward);
                 float distance;
                 if (SlicePlane.Raycast(eyeRay, out distance))
                 {
-
+                    CutPupil.transform.position = eyeRay.direction * distance + eyeRay.origin;
+                    CutPupil.transform.SetParent(SelectedCuttable.transform, true);
+                    var dir = CutPupil.transform.position - CutEye.transform.position;
+                    dir.Normalize();
+                    SelectedLineRender.SetPositions(new Vector3[] { CutEye.transform.position + dir * r, CutEye.transform.position - dir * r });
+                    SelectedLineRender.positionCount = 2;
                 }
             }
         }
