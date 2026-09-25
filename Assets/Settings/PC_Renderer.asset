@@ -68,11 +68,11 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: BlitAndSwapColorRendererFeature
   m_EditorClassIdentifier: Assembly-CSharp::BlitAndSwapColorRendererFeature
-  m_Active: 1
+  m_Active: 0
   material: {fileID: 2100000, guid: c7bd8acd22ec244bdbdf6278e290cd88, type: 2}
   pureBlitMaterial: {fileID: 2100000, guid: 348f85bd478a8413aa9545df5ba1a45a, type: 2}
   renderPassEvent: 600
-  RenderWidth: 500
+  RenderWidth: 320
 --- !u!114 &5931325012308461332
 MonoBehaviour:
   m_ObjectHideFlags: 0

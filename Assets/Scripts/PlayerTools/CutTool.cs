@@ -9,135 +9,67 @@ public class CutTool : BaseTool
     private Vector3 _endCutPoint;
     private bool _clicking;
 
-    public float MaxCutRange;
+    public float MaxSelectRange;
 
     public LineRenderer SelectedLineRender;
+
+    public Sliceable SelectedCuttable;
+    public Vector3 LocalSliceableCutOrigin;
+    public Vector3 LocalSliceableCutNormal;
+    public Vector3 LocalSliceableCutDirection;
+    public Plane SlicePlane;
 
     public override void ActiveToolUpdate(Camera camera)
     {
         var cameraTransform = camera.transform;
         LineRenderer _lineRenderer = GetComponent<LineRenderer>();
-        if (!_clicking)
+        if (Input.GetMouseButtonDown(0))
         {
-            if (Input.GetMouseButtonDown(0))
+            if (SelectedCuttable == null)
             {
-                bool didHit = Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, MaxCutRange);
-                float distance = MaxCutRange;
-                if (didHit)
+                bool didHit = Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, MaxSelectRange);
+                if (didHit && hit.distance < MaxSelectRange && hit.collider != null)
                 {
-                    distance = hit.distance;
-                }
-                _startCutPoint = cameraTransform.position + cameraTransform.forward * distance;
-                _clicking = true;
-            }
-        }
-        else
-        {
-            bool didHit = Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, MaxCutRange);
-            float distance = MaxCutRange;
-            if (didHit)
-            {
-                distance = hit.distance;
-            }
-            _endCutPoint = cameraTransform.position + cameraTransform.forward * distance;
-            // we are going to cast to all colliders the question is what are we going to do with them
-            Vector3 sphereCenter = (cameraTransform.position + _startCutPoint + _endCutPoint) / 3;
-            float sphereRadius = Mathf.Max(
-                (cameraTransform.position - sphereCenter).magnitude,
-                (_startCutPoint - sphereCenter).magnitude,
-                (_endCutPoint - sphereCenter).magnitude) + 1000;
-            var colliders = Physics.OverlapSphere(sphereCenter, sphereRadius);
-
-            if (Input.GetMouseButton(0))
-            {
-                Debug.Log("clickking");
-                bool validSliceFound = false;
-                float smallestSliceableAngle = float.MaxValue;
-                float largestSliceableAngle = float.MinValue;
-
-                var basis = MathUtils.ComputePlaneBasisForRadialTransform(_startCutPoint, _endCutPoint, cameraTransform.position);
-                Vector3 closestStartPoint = Vector3.zero;
-                Vector3 closestEndPoint = Vector3.zero;
-
-                int numCanSlice = 0;
-                foreach (var col in colliders)
-                {
-                    var sliceable = col.gameObject.GetComponent<Sliceable>();
+                    var sliceable = hit.collider.gameObject.GetComponent<Sliceable>();
                     if (sliceable != null)
                     {
-                        var res = sliceable.GetSliceableSection(cameraTransform.position, _startCutPoint, _endCutPoint, 1000, camera);
-                        float sliceableSmallestPointAngle =
-                            MathUtils.PlanePointToAngle(basis, cameraTransform.position, res.start);
-                        float sliceableLargestPointAngle =
-                            MathUtils.PlanePointToAngle(basis, cameraTransform.position, res.end);
-                        if (res.canSlice)
+                        SelectedCuttable = sliceable;
+                        var highlightable = sliceable.gameObject.GetComponent<Highlightable>();
+                        LocalSliceableCutNormal = sliceable.transform.worldToLocalMatrix.MultiplyVector(hit.normal);
+                        LocalSliceableCutOrigin = sliceable.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
+                        SlicePlane = new Plane(LocalSliceableCutNormal, LocalSliceableCutOrigin);
+                        if (highlightable != null)
                         {
-                            numCanSlice++;
-                            validSliceFound = true;
-                            if (sliceableSmallestPointAngle < smallestSliceableAngle)
-                            {
-                                smallestSliceableAngle = sliceableSmallestPointAngle;
-                                closestStartPoint = res.start;
-                            }
-                            if (sliceableLargestPointAngle > largestSliceableAngle)
-                            {
-                                largestSliceableAngle = sliceableLargestPointAngle;
-                                closestEndPoint = res.end;
-                            }
+                            highlightable.Select();
                         }
                     }
-                }
-                if (validSliceFound)
-                {
-                    SelectedLineRender.SetPositions(new Vector3[] { closestStartPoint, closestEndPoint });
-                    SelectedLineRender.positionCount = 2;
-                    Debug.Log("predicted " + numCanSlice + " slices cut " + smallestSliceableAngle + "," + largestSliceableAngle);
-                }
-                else
-                {
-                    SelectedLineRender.positionCount = 0;
                 }
             }
             else
             {
-                _clicking = false;
-                // cut logic
-                Debug.Log("cut");
-                // TODO obviously this needs to be improved
-                // TODO create a thin box here an find the correct orientation to narrow down sliceables
-                // Then for each sliceable that's possible get enter and exit points
-                // Then determine for each pair of enter and exit points (a segment) if they are allowed to cut
-                // by either construction a mesh collider or using raycasting along the segment
-                foreach (var col in colliders)
+                // look for intersection point with the plane
+                var eyeRay = new Ray(camera.transform.position, camera.transform.forward);
+                float distance;
+                if (SlicePlane.Raycast(eyeRay, out distance))
                 {
-                    var sliceable = col.gameObject.GetComponent<Sliceable>();
-                    if (sliceable != null)
-                    {
-                        sliceable.Slice(cameraTransform.position, _startCutPoint, _endCutPoint, 1000, camera);
-                    }
+
                 }
             }
-        }
-
-        if (_clicking)
-        {
-            Debug.Log("updato:" + _startCutPoint + "," + _endCutPoint);
-            _lineRenderer.SetPositions(new Vector3[] { _startCutPoint, _endCutPoint });
-            _lineRenderer.positionCount = 2;
-            // from: https://www.reddit.com/r/Unity2D/comments/kt01nv/dotted_linerenderer_fixed/
-            // b/c I am lazy
-            _lineRenderer.material.mainTextureScale = new Vector2(1f / _lineRenderer.startWidth, 1.0f);
-        }
-        else
-        {
-            _lineRenderer.SetPositions(new Vector3[] { });
-            _lineRenderer.positionCount = 0;
-            SelectedLineRender.positionCount = 0;
         }
     }
 
     public override string GetName()
     {
         return "Cut Tool";
+    }
+
+    public void OnDrawGizmos()
+    {
+        if (SelectedCuttable)
+        {
+            var origin = SelectedCuttable.transform.localToWorldMatrix.MultiplyPoint(LocalSliceableCutOrigin);
+            var normal = SelectedCuttable.transform.localToWorldMatrix.MultiplyVector(LocalSliceableCutNormal);
+            Gizmos.DrawLine(origin, origin + normal * 0.5f);
+        }
     }
 }
