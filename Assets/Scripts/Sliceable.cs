@@ -4,7 +4,7 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
+[RequireComponent(typeof(MeshFilter), typeof(MeshCollider), typeof(Highlightable))]
 public class Sliceable : MonoBehaviour
 {
     const int TOP_PARTION_IDX = 0;
@@ -396,11 +396,11 @@ public class Sliceable : MonoBehaviour
             };
         }*/
 
-        Vector3 sliceStartPointWorld = localToWorld.MultiplyPoint(closestStartPoint);
+        /*Vector3 sliceStartPointWorld = localToWorld.MultiplyPoint(closestStartPoint);
         Vector3 sliceEndPointWorld = localToWorld.MultiplyPoint(closestEndPoint);
         Vector3 cameraPositionWorld = localToWorld.MultiplyPoint(localCameraPosition);
 
-        /*if (SliceableAreaOccluded(GetComponent<MeshCollider>(), cameraPositionWorld, sliceStartPointWorld, sliceEndPointWorld, 5))
+        if (SliceableAreaOccluded(GetComponent<MeshCollider>(), cameraPositionWorld, sliceStartPointWorld, sliceEndPointWorld, 5))
         {
             return new SliceInternalResult()
             {

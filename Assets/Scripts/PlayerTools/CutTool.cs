@@ -24,6 +24,11 @@ public class CutTool : BaseTool
 
     private void Deselect()
     {
+        var highlightable = SelectedCuttable.GetComponent<Highlightable>();
+        if (highlightable != null)
+        {
+            highlightable.Deselect();
+        }
         _cutLineEstablished = false;
         SelectedCuttable = null;
     }
