@@ -384,7 +384,8 @@ public class Sliceable : MonoBehaviour
             }
         }
 
-        if (!atLeastOneParitionInBounds)
+        // New note Sept 25th: in the new system all cuts are full cuts so we don't need this check anymore
+        /*if (!atLeastOneParitionInBounds)
         {
             //Debug.Log("cannot cut convex polyhedra neither cut side is fully in bounds");
             return new SliceInternalResult()
@@ -393,7 +394,7 @@ public class Sliceable : MonoBehaviour
                 localSliceSegmentStart = closestStartPoint,
                 localSliceSegmentEnd = closestEndPoint,
             };
-        }
+        }*/
 
         Vector3 sliceStartPointWorld = localToWorld.MultiplyPoint(closestStartPoint);
         Vector3 sliceEndPointWorld = localToWorld.MultiplyPoint(closestEndPoint);
