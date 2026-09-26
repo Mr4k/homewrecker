@@ -529,6 +529,7 @@ public class Sliceable : MonoBehaviour
         Physics.SyncTransforms();
         secondSliceable.GetComponent<MeshFilter>().sharedMesh = bottomMesh;
         secondSliceable.GetComponent<MeshCollider>().sharedMesh = bottomMesh;
+        secondSliceable.GetComponent<MeshRenderer>().sharedMaterial = GetComponent<MeshRenderer>().sharedMaterial;
 
         // handle screwables
         var screwableBody = GetComponent<ScrewableBody>();
