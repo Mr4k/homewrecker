@@ -46,7 +46,7 @@ public class ScrewBlueprint : BaseBlueprint
             throw new System.Exception("Could not screw in screw could not find other body");
         }
 
-        screw.Init(Body1, body2, worldIntersectionPoint);
+        screw.Init(Body1, body2, worldIntersectionPoint, false);
         ActiveScrew = screw;
     }
 

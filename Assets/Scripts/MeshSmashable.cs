@@ -9,14 +9,8 @@ public class MeshSmashable : Smashable
         {
             name = "MeshDebris"
         };
+        //debrisGameObject.transform.position = transform.position;
         debrisGameObject.transform.SetParent(transform.parent, false);
-        var debris = debrisGameObject.AddComponent<Rigidbody>();
-        debris.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        debris.interpolation = RigidbodyInterpolation.Interpolate;
-
-
-        debris.transform.localScale = transform.localScale;
-        debris.transform.localPosition = transform.localPosition;
 
         var meshFilter = debrisGameObject.AddComponent<MeshFilter>();
         var currMesh = GetComponent<MeshFilter>().mesh;
@@ -29,7 +23,14 @@ public class MeshSmashable : Smashable
         meshCollider.convex = true;
         meshCollider.sharedMesh = currMesh;
 
-        Vector3 force = (transform.position - originPoint) * smashForce;
+        var debris = debrisGameObject.AddComponent<Rigidbody>();
+        debris.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        debris.interpolation = RigidbodyInterpolation.Interpolate;
+
+        debris.transform.localScale = transform.localScale;
+        debris.transform.localPosition = transform.localPosition;
+
+        Vector3 force = (debrisGameObject.transform.localToWorldMatrix.MultiplyPoint(debris.centerOfMass) - originPoint).normalized * smashForce;
         debris.AddForce(force);
         Destroy(this.gameObject);
     }

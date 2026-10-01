@@ -22,21 +22,16 @@ public class Smashable : MonoBehaviour
     private void Awake()
     {
         _renderer = GetComponentInChildren<Renderer>();
-        _baseColor = _renderer.material.color;
+        //_baseColor = _renderer.material.color;
     }
 
     public virtual void Smash(Vector3 originPoint, float smashForce)
     {
-        var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation, transform.parent);
+        var debris = Instantiate(DebrisPrefab, transform.position, transform.rotation);
         debris.transform.localScale = transform.localScale;
-        Vector3 force = (transform.position - originPoint) * smashForce;
+        Vector3 force = (transform.position - originPoint).normalized * smashForce;
         debris.AddForce(force);
         Destroy(this.gameObject);
-    }
-
-    private void SetHighlight(bool on)
-    {
-        _renderer.material.color = on ? HighlightColor : _baseColor;
     }
 
     private void OnDrawGizmos()

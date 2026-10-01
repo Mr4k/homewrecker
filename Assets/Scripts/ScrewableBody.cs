@@ -216,4 +216,21 @@ public class ScrewableBody : MonoBehaviour
     {
         return GetComponent<Rigidbody>();
     }
+
+    public void DeattachWeakScrews()
+    {
+        // note this is so inefficient
+        var attachedWeakScrews = new Queue<Screw>();
+        foreach (var screw in AttachedScrews)
+        {
+            if (screw.Weak())
+            {
+                attachedWeakScrews.Enqueue(screw);
+            }
+        }
+        foreach (var screw in AttachedScrews)
+        {
+            AttachedScrews.Remove(screw);
+        }
+    }
 }

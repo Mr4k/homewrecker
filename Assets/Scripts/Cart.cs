@@ -19,32 +19,32 @@ public class Cart : Draggable
         _wheels = GetComponentsInChildren<Wheel>();
     }
 
-    public override void BeginDrag()
+    public override void Pickup()
     {
         foreach (var w in _wheels)
         {
             w.dragged = true;
         }
-        base.BeginDrag();
+        base.Pickup();
     }
 
-    public override void OnDrag(Vector3 dragDirection)
+    /*public override void OnDrag(Vector3 dragDirection)
     {
         foreach (var w in _wheels)
         {
             w.pullDirection = dragDirection;
         }
         base.OnDrag(dragDirection);
-    }
+    }*/
 
-    public override void EndDrag()
+    public override void Drop()
     {
         foreach (var w in _wheels)
         {
             w.pullDirection = Vector3.zero;
             w.dragged = false;
         }
-        base.EndDrag();
+        base.Drop();
     }
 
     public virtual void FixedUpdate()

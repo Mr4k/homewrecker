@@ -88,6 +88,7 @@ class FracturableWallBlueprint : BaseBlueprint
         containerGameObject.transform.SetParent(transform);
         containerGameObject.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
 
+        var allScrewableBodiesSharingVertex = new Dictionary<VPoint, List<ScrewableBody>>();
         foreach (var tp in triangulatedPolygons)
         {
             var mesh = MeshFromTriangulatedPolygon(tp);
@@ -96,6 +97,8 @@ class FracturableWallBlueprint : BaseBlueprint
             gameObject.transform.SetParent(containerGameObject.transform, false);
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+            meshRenderer.material = null;
+            meshRenderer.sharedMaterial = null;
             meshRenderer.sharedMaterial = MaterialForMesh;
 
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
@@ -105,7 +108,11 @@ class FracturableWallBlueprint : BaseBlueprint
             meshCollider.sharedMesh = mesh;
 
             gameObject.AddComponent<MeshSmashable>();
+            var screwableBody = gameObject.AddComponent<ScrewableBody>();
+            screwableBody.density = 0.1f;
         }
+        var neighborsByIndex = new Dictionary<int, List<ScrewableBody>>();
+
     }
 
     public struct TriangluatedPolygon

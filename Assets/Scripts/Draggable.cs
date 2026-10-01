@@ -4,39 +4,31 @@ using UnityEngine;
 public class Draggable : MonoBehaviour
 {
     public Color HighlightColor = Color.yellow;
-    public Rigidbody Rigidbody { get => _rigidbody; }
-
-    private Rigidbody _rigidbody;
-    private Renderer _renderer;
-    private Color _baseColor;
     private bool _dragged;
+    public Vector3 targetWorldPosition;
+    public Quaternion targetWorldRotation;
 
-    private void Awake()
+    private void FixedUpdate()
     {
-        _rigidbody = GetComponent<Rigidbody>();
-        _renderer = GetComponentInChildren<Renderer>();
-        _baseColor = _renderer.material.color;
+        if (_dragged)
+        {
+            var _rigidbody = GetComponent<Rigidbody>();
+            _rigidbody.MovePosition(targetWorldPosition);
+            _rigidbody.MoveRotation(targetWorldRotation);
+        }
     }
 
-    private void Update()
-    {
-
-    }
-
-    public virtual void BeginDrag()
+    public virtual void Pickup()
     {
         _dragged = true;
+        var _rigidbody = GetComponent<Rigidbody>();
+        _rigidbody.isKinematic = true;
     }
 
-    public virtual void EndDrag()
+    public virtual void Drop()
     {
         _dragged = false;
-    }
-
-    public virtual void OnDrag(Vector3 dragDirection) { }
-
-    private void SetHighlight(bool on)
-    {
-        _renderer.material.color = on ? HighlightColor : _baseColor;
+        var _rigidbody = GetComponent<Rigidbody>();
+        _rigidbody.isKinematic = false;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class HandTool : BaseTool
@@ -6,15 +7,23 @@ public class HandTool : BaseTool
     // for grabber
     public float GrabRange = 5f;
     public Transform PullTarget;
-    public float PullForce = 60f;
-    public float StablizerTorque = 10f;
-    public float Damping = 8f;
     public Draggable _held;
-    public Vector3 _heldGrabPoint;
+    public HashSet<Draggable> _allHeld = new HashSet<Draggable>();
+    public Vector3 _heldGrabOffsetInHeldLocalSpace;
+
+    // where should the held object try to be on the xz plane
+    public float currXZPlaneTargetAngle = 0;
+
+    // how far the object is from you on the xz place (unsigned)
+    public float currHeldFlatDistance = 0;
+
+    // how far the object is from you on the y axis (signed)
+    public float currHeldFloatDistance = 0;
+
     public override void ActiveToolUpdate(Camera camera)
     {
         Transform cameraTransform = camera.transform;
-        if (_held == null && Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, GrabRange))
+        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, GrabRange))
         {
             if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())
             {
@@ -22,44 +31,45 @@ public class HandTool : BaseTool
                 {
                     var draggable = hit.rigidbody.GetComponent<Draggable>();
                     _held = draggable;
-                    _heldGrabPoint = _held.transform.worldToLocalMatrix.MultiplyPoint(hit.point);
-                    _held.BeginDrag();
+                    if (!_allHeld.Contains(_held))
+                    {
+                        _held.Pickup();
+                        _allHeld.Add(_held);
+                    }
+                    var worldPoint = cameraTransform.position + cameraTransform.forward;
+                    var offset = _held.transform.position - worldPoint;
+                    _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(offset);
+                    _held.targetWorldRotation = _held.transform.rotation;
+                    _held.targetWorldPosition = _held.transform.position - worldPoint;
                 }
             }
         }
-        if (_held != null && !Input.GetMouseButton(0))
+        if (!Input.GetMouseButtonDown(0) && Input.GetMouseButtonDown(1))
         {
-            _held.EndDrag();
-            _held = null;
+            if (_held != null)
+            {
+                _allHeld.Remove(_held);
+                _held.Drop();
+            }
+        }
+        if (_held != null)
+        {
+            var cameraDirXZProj = new Vector3(camera.transform.forward.x, 0, camera.transform.forward.z).normalized;
+            var cameraDirYProj = camera.transform.forward.y * ;
+            var targetWorldPoint = camera.transform.forward;
+            var _heldOffsetInWorldSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(_heldGrabOffsetInHeldLocalSpace);
+            _held.targetWorldPosition = _held.transform.position - worldPoint;
         }
     }
 
     public override void ActiveToolFixedUpdate(FirstPersonCharacterController character)
     {
-        float fixedDeltaTimeMul = Time.fixedDeltaTime * 60;
-        if (_held != null)
-        {
-            var heldGrabPointWorld = _held.transform.localToWorldMatrix.MultiplyPoint(_heldGrabPoint);
-            var targetDisplacement = PullTarget.position - heldGrabPointWorld;
-            var relativeVelocity = _held.Rigidbody.linearVelocity - character.Motor.Velocity;
-            var force = targetDisplacement * 100 - relativeVelocity * 10;
-            var normalizedForce = force.normalized;
-            var magForce = force.magnitude;
-            magForce = Math.Min(magForce, PullForce);
-            // note that surfing is a bug. Should we keep it? Could be fun
-            // to combat surfing maybe we just make it so that you cannot pull something inside yourself
-            _held.Rigidbody.AddForceAtPosition(normalizedForce * magForce * fixedDeltaTimeMul, heldGrabPointWorld);
-            _held.Rigidbody.AddTorque(-_held.Rigidbody.angularVelocity * 0.1f * fixedDeltaTimeMul);
-            _held.OnDrag(normalizedForce);
-        }
-        base.ActiveToolFixedUpdate(character);
     }
 
     public override void ToolDeselected()
     {
         if (_held != null)
         {
-            _held.EndDrag();
             _held = null;
         }
         base.ToolDeselected();

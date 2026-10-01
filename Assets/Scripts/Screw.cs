@@ -9,12 +9,20 @@ public class Screw : MonoBehaviour
     public ScrewableBody[] AttachedBodies = new ScrewableBody[2];
     public Vector3 _intersectionPositionRelativeToParentBody = Vector3.zero;
 
-    public void Init(ScrewableBody body1, ScrewableBody body2, Vector3 worldIntersectionPosition)
+    private bool _weak;
+
+    public void Init(ScrewableBody body1, ScrewableBody body2, Vector3 worldIntersectionPosition, bool weak)
     {
         AttachedBodies[0] = body1;
         AttachedBodies[1] = body2;
         transform.SetParent(AttachedBodies[0].transform, true);
         _intersectionPositionRelativeToParentBody = AttachedBodies[0].transform.worldToLocalMatrix.MultiplyPoint3x4(worldIntersectionPosition);
+        _weak = weak;
+    }
+
+    public bool Weak()
+    {
+        return _weak;
     }
 
     public void Start()
