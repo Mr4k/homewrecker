@@ -41,6 +41,11 @@ public class HandTool : BaseTool
                     _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(offset);
                     _held.targetWorldRotation = _held.transform.rotation;
                     _held.targetWorldPosition = _held.transform.position - worldPoint;
+                    var projectedFlatDistance = _held.targetWorldPosition - transform.position;
+                    var projectedUpDistance = projectedFlatDistance.y;
+                    projectedFlatDistance.y = 0;
+                    currHeldFlatDistance = projectedFlatDistance.magnitude;
+                    currHeldFloatDistance = projectedUpDistance;
                 }
             }
         }
@@ -54,11 +59,11 @@ public class HandTool : BaseTool
         }
         if (_held != null)
         {
-            var cameraDirXZProj = new Vector3(camera.transform.forward.x, 0, camera.transform.forward.z).normalized;
-            var cameraDirYProj = camera.transform.forward.y * ;
-            var targetWorldPoint = camera.transform.forward;
+            // note there is a singularity when the player looks straight up
+            // our simple response is to just ban them from doing it (looking 100% straight up)
+            currXZPlaneTargetAngle = (float)Math.Atan2(camera.transform.forward.z, camera.transform.forward.x);
             var _heldOffsetInWorldSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(_heldGrabOffsetInHeldLocalSpace);
-            _held.targetWorldPosition = _held.transform.position - worldPoint;
+            _held.targetWorldPosition = transform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (currHeldFloatDistance + 3);
         }
     }
 
