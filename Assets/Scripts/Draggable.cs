@@ -8,38 +8,27 @@ public class Draggable : MonoBehaviour
     private bool _dragged;
     public Vector3 targetWorldPosition;
     public Quaternion targetWorldRotation;
+    public float maxStabilizationAcceleration = 2;
+    public float maxGoalDiffVelChange = 4;
     private void FixedUpdate()
     {
         if (_dragged)
         {
             var _rigidbody = GetComponent<Rigidbody>();
-            var vel = Vector3.Lerp(targetWorldPosition - _rigidbody.position, Vector3.zero, 0.8f);
-            vel = vel.normalized * Math.Min(vel.magnitude, 0.5f);
-            int i = 0;
-            float epsilon = 0.01f;
-            while (vel.magnitude > epsilon && i < 3)
-            {
-                Vector3 velToMoveThisStep = vel;
-                bool velRemaining = false;
-                {
-                    RaycastHit hitInfo;
-                    if (_rigidbody.SweepTest(vel.normalized, out hitInfo, vel.magnitude))
-                    {
-                        velRemaining = true;
-                        var targetPos = _rigidbody.position + vel.normalized * Math.Max(hitInfo.distance - epsilon, 0);
-                        velToMoveThisStep = targetPos - _rigidbody.position;
-                        Vector3 remainingVel = vel.normalized * Math.Max(vel.magnitude - hitInfo.distance - epsilon, 0);
-                        vel = Vector3.ProjectOnPlane(remainingVel, hitInfo.normal);
-                    }
-                }
-                _rigidbody.MovePosition(_rigidbody.position + velToMoveThisStep);
-                if (!velRemaining)
-                {
-                    break;
-                }
-                i++;
-            }
-
+            var goalDiff = targetWorldPosition - _rigidbody.position;
+            var goalAxis = goalDiff.normalized;
+            float goalProj = Vector3.Dot(_rigidbody.linearVelocity, goalAxis);
+            Vector3 extraVel = _rigidbody.linearVelocity - goalAxis * goalProj;
+            // remove extra vel if possible
+            Vector3 opposingExtraForce = -extraVel;
+            opposingExtraForce = opposingExtraForce.normalized * Math.Min(opposingExtraForce.magnitude, maxStabilizationAcceleration);
+            _rigidbody.AddForce(opposingExtraForce, ForceMode.VelocityChange);
+            // push motion along goal axis toward goal
+            var goalVel = goalAxis * goalProj;
+            var totalGoalVelChange = goalDiff.magnitude * goalAxis * 10 - goalVel;
+            totalGoalVelChange = totalGoalVelChange.normalized * Math.Min(totalGoalVelChange.magnitude, maxGoalDiffVelChange);
+            _rigidbody.AddForce(totalGoalVelChange, ForceMode.VelocityChange);
+            _rigidbody.MoveRotation(targetWorldRotation);
         }
     }
 
@@ -47,13 +36,13 @@ public class Draggable : MonoBehaviour
     {
         _dragged = true;
         var _rigidbody = GetComponent<Rigidbody>();
-        _rigidbody.isKinematic = true;
+        _rigidbody.useGravity = false;
     }
 
     public virtual void Drop()
     {
         _dragged = false;
         var _rigidbody = GetComponent<Rigidbody>();
-        _rigidbody.isKinematic = false;
+        _rigidbody.useGravity = true;
     }
 }

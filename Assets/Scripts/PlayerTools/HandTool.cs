@@ -45,13 +45,6 @@ public class HandTool : BaseTool
                     projectedFlatDistance.y = 0;
                     currHeldFlatDistance = projectedFlatDistance.magnitude;
                     currHeldFloatDistance = projectedUpDistance;
-
-                    var hyp1 = (_held.targetWorldPosition - cameraTransform.position).magnitude;
-                    var sinTheta = camera.transform.forward.y;
-                    var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
-                    var hyp = (float)(currHeldFlatDistance / cosTheta);
-                    Debug.Log(sinTheta * hyp1 + ":" + projectedUpDistance);
-                    Debug.Log("hyp" + hyp + ":" + (_held.targetWorldPosition - cameraTransform.position).magnitude);
                 }
                 else if (Input.GetMouseButtonDown(1))
                 {
