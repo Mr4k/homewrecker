@@ -36,34 +36,54 @@ public class HandTool : BaseTool
                         _held.Pickup();
                         _allHeld.Add(_held);
                     }
-                    var worldPoint = cameraTransform.position + cameraTransform.forward;
-                    var offset = _held.transform.position - worldPoint;
-                    _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(offset);
+                    var offset = _held.transform.position - hit.point;
+                    _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyVector(offset);
                     _held.targetWorldRotation = _held.transform.rotation;
-                    _held.targetWorldPosition = _held.transform.position - worldPoint;
-                    var projectedFlatDistance = _held.targetWorldPosition - transform.position;
+                    _held.targetWorldPosition = hit.point;
+                    var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
                     var projectedUpDistance = projectedFlatDistance.y;
                     projectedFlatDistance.y = 0;
                     currHeldFlatDistance = projectedFlatDistance.magnitude;
                     currHeldFloatDistance = projectedUpDistance;
+
+                    var hyp1 = (_held.targetWorldPosition - cameraTransform.position).magnitude;
+                    var sinTheta = camera.transform.forward.y;
+                    var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
+                    var hyp = (float)(currHeldFlatDistance / cosTheta);
+                    Debug.Log(sinTheta * hyp1 + ":" + projectedUpDistance);
+                    Debug.Log("hyp" + hyp + ":" + (_held.targetWorldPosition - cameraTransform.position).magnitude);
                 }
+                else if (Input.GetMouseButtonDown(1))
+                {
+                    var draggable = hit.rigidbody.GetComponent<Draggable>();
+                    if (_allHeld.Contains(draggable))
+                    {
+                        _allHeld.Remove(draggable);
+                        draggable.Drop();
+                        if (_held == draggable)
+                        {
+                            _held = null;
+                        }
+                    }
+                }
+
             }
         }
-        if (!Input.GetMouseButtonDown(0) && Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonUp(0) && _held != null)
         {
-            if (_held != null)
-            {
-                _allHeld.Remove(_held);
-                _held.Drop();
-            }
+            _held = null;
         }
+
         if (_held != null)
         {
             // note there is a singularity when the player looks straight up
             // our simple response is to just ban them from doing it (looking 100% straight up)
             currXZPlaneTargetAngle = (float)Math.Atan2(camera.transform.forward.z, camera.transform.forward.x);
-            var _heldOffsetInWorldSpace = _held.transform.worldToLocalMatrix.MultiplyPoint(_heldGrabOffsetInHeldLocalSpace);
-            _held.targetWorldPosition = transform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (currHeldFloatDistance + 3);
+            var _heldOffsetInWorldSpace = _held.transform.worldToLocalMatrix.MultiplyVector(_heldGrabOffsetInHeldLocalSpace);
+            var sinTheta = camera.transform.forward.y / cameraTransform.forward.magnitude;
+            var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
+            var hyp = (float)(currHeldFlatDistance / cosTheta);
+            _held.targetWorldPosition = cameraTransform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (sinTheta * hyp) + _heldOffsetInWorldSpace;
         }
     }
 

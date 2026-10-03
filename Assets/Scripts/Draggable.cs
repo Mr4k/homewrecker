@@ -8,10 +8,6 @@ public class Draggable : MonoBehaviour
     private bool _dragged;
     public Vector3 targetWorldPosition;
     public Quaternion targetWorldRotation;
-    public PIDParameters positionControllerParams;
-    public PIDController[] positionControllers = new PIDController[3];
-
-
     private void FixedUpdate()
     {
         if (_dragged)
