@@ -79,7 +79,7 @@ public class HandTool : BaseTool
             // note there is a singularity when the player looks straight up
             // our simple response is to just ban them from doing it (looking 100% straight up)
             currXZPlaneTargetAngle = (float)Math.Atan2(camera.transform.forward.z, camera.transform.forward.x);
-            var _heldOffsetInWorldSpace = _held.transform.worldToLocalMatrix.MultiplyVector(_heldGrabOffsetInHeldLocalSpace);
+            var _heldOffsetInWorldSpace = _held.transform.localToWorldMatrix.MultiplyVector(_heldGrabOffsetInHeldLocalSpace);
             var sinTheta = camera.transform.forward.y / cameraTransform.forward.magnitude;
             var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
             var hyp = (float)(currHeldFlatDistance / cosTheta);
