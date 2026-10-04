@@ -17,9 +17,6 @@ public class HandTool : BaseTool
     // how far the object is from you on the xz place (unsigned)
     public float currHeldFlatDistance = 0;
 
-    // how far the object is from you on the y axis (signed)
-    public float currHeldFloatDistance = 0;
-
     public override void ActiveToolUpdate(Camera camera)
     {
         Transform cameraTransform = camera.transform;
@@ -35,16 +32,14 @@ public class HandTool : BaseTool
                     {
                         _held.Pickup();
                         _allHeld.Add(_held);
+                        _held.targetWorldRotation = _held.transform.rotation;
                     }
                     var offset = _held.transform.position - hit.point;
                     _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyVector(offset);
-                    _held.targetWorldRotation = _held.transform.rotation;
                     _held.targetWorldPosition = hit.point;
                     var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
-                    var projectedUpDistance = projectedFlatDistance.y;
                     projectedFlatDistance.y = 0;
                     currHeldFlatDistance = projectedFlatDistance.magnitude;
-                    currHeldFloatDistance = projectedUpDistance;
                 }
                 else if (Input.GetMouseButtonDown(1))
                 {
@@ -64,6 +59,7 @@ public class HandTool : BaseTool
         }
         if (Input.GetMouseButtonUp(0) && _held != null)
         {
+            _held.LockInCurrentPosition();
             _held = null;
         }
 

@@ -42,6 +42,11 @@ public class Draggable : MonoBehaviour
         _rigidbody.useGravity = false;
     }
 
+    public void LockInCurrentPosition()
+    {
+        targetWorldPosition = transform.position;
+    }
+
     public virtual void Drop()
     {
         _dragged = false;
