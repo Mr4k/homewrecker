@@ -10,6 +10,7 @@ public class Draggable : MonoBehaviour
     public Quaternion targetWorldRotation;
     public float maxStabilizationAcceleration = 2;
     public float maxGoalDiffVelChange = 4;
+    public float maxRotationCorrectionAngularVelChange = 5;
     private void FixedUpdate()
     {
         if (_dragged)
@@ -28,7 +29,9 @@ public class Draggable : MonoBehaviour
             var totalGoalVelChange = goalDiff.magnitude * goalAxis * 10 - goalVel;
             totalGoalVelChange = totalGoalVelChange.normalized * Math.Min(totalGoalVelChange.magnitude, maxGoalDiffVelChange);
             _rigidbody.AddForce(totalGoalVelChange, ForceMode.VelocityChange);
-            _rigidbody.MoveRotation(targetWorldRotation);
+
+            // rotation
+            _rigidbody.AddTorque(-_rigidbody.angularVelocity + (Vector3.Cross(transform.up, targetWorldRotation * Vector3.up) + Vector3.Cross(transform.right, targetWorldRotation * Vector3.right)) * maxRotationCorrectionAngularVelChange, ForceMode.VelocityChange);
         }
     }
 
