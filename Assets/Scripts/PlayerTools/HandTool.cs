@@ -17,6 +17,22 @@ public class HandTool : BaseTool
     // how far the object is from you on the xz place (unsigned)
     public float currHeldFlatDistance = 0;
 
+    public Quaternion currRotationOffset;
+
+    public Quaternion ShortestPathBetweenTwoQuats(Quaternion a, Quaternion b)
+    {
+        if (Quaternion.Dot(a, b) < 0)
+        {
+            return a * Quaternion.Inverse(Multiply(b, -1));
+        }
+        else return a * Quaternion.Inverse(b);
+    }
+
+    public static Quaternion Multiply(Quaternion input, float scalar)
+    {
+        return new Quaternion(input.x * scalar, input.y * scalar, input.z * scalar, input.w * scalar);
+    }
+
     public override void ActiveToolUpdate(Camera camera)
     {
         Transform cameraTransform = camera.transform;
@@ -40,6 +56,10 @@ public class HandTool : BaseTool
                     var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
                     projectedFlatDistance.y = 0;
                     currHeldFlatDistance = projectedFlatDistance.magnitude;
+                    var idealizedLookRotation = Quaternion.Inverse(Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition));
+                    currRotationOffset = ShortestPathBetweenTwoQuats(idealizedLookRotation, _held.targetWorldRotation);
+                    var b = currRotationOffset * Quaternion.Inverse(idealizedLookRotation);
+                    Debug.Log(b.eulerAngles + "=:=" + _held.targetWorldRotation.eulerAngles);
                 }
                 else if (Input.GetMouseButtonDown(1))
                 {
@@ -73,6 +93,7 @@ public class HandTool : BaseTool
             var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
             var hyp = (float)(currHeldFlatDistance / cosTheta);
             _held.targetWorldPosition = cameraTransform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (sinTheta * hyp) + _heldOffsetInWorldSpace;
+            _held.targetWorldRotation = currRotationOffset * Quaternion.Inverse(Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition));
         }
     }
 
