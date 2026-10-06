@@ -37,7 +37,7 @@ public class Cart : Draggable
         base.OnDrag(dragDirection);
     }*/
 
-    public override void Drop()
+    /*public override void Drop()
     {
         foreach (var w in _wheels)
         {
@@ -45,7 +45,7 @@ public class Cart : Draggable
             w.dragged = false;
         }
         base.Drop();
-    }
+    }*/
 
     public virtual void FixedUpdate()
     {

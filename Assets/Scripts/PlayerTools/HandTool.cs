@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
+
 
 public class HandTool : BaseTool
 {
+    public enum State
+    {
+        Grabbing,
+        Rotating,
+    }
     // for grabber
     public float GrabRange = 5f;
-    public Transform PullTarget;
     public Draggable _held;
-    public HashSet<Draggable> _allHeld = new HashSet<Draggable>();
     public Vector3 _heldGrabOffsetInHeldLocalSpace;
 
     // where should the held object try to be on the xz plane
@@ -17,8 +22,8 @@ public class HandTool : BaseTool
     // how far the object is from you on the xz place (unsigned)
     public float currHeldFlatDistance = 0;
 
-    public Quaternion initialRotationUponPickup;
-    public Quaternion initialLookQuat;
+    //public Quaternion initialRotationUponPickup;
+    //public Quaternion initialLookQuat;
 
     public Quaternion ShortestPathBetweenTwoQuats(Quaternion b, Quaternion a)
     {
@@ -28,6 +33,14 @@ public class HandTool : BaseTool
         }
         else
             return a * Quaternion.Inverse(b);
+    }
+
+    // this is used for when objects are split or unscrewed
+    public void SetAsHeldUp(Draggable draggable)
+    {
+        draggable.targetWorldPosition = draggable.transform.position;
+        draggable.targetWorldRotation = draggable.transform.rotation;
+        draggable.Suspend();
     }
 
     public static Quaternion Multiply(Quaternion input, float scalar)
@@ -46,40 +59,35 @@ public class HandTool : BaseTool
                 {
                     var draggable = hit.rigidbody.GetComponent<Draggable>();
                     _held = draggable;
-                    if (!_allHeld.Contains(_held))
-                    {
-                        _held.Pickup();
-                        _allHeld.Add(_held);
-                        _held.targetWorldRotation = _held.transform.rotation;
-                    }
+                    _held.Pickup();
+                    _held.targetWorldRotation = _held.transform.rotation;
                     var offset = _held.transform.position - hit.point;
                     _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyVector(offset);
                     _held.targetWorldPosition = hit.point;
                     var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
                     projectedFlatDistance.y = 0;
                     currHeldFlatDistance = projectedFlatDistance.magnitude;
-                    initialLookQuat = Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition);
-                    initialRotationUponPickup = _held.targetWorldRotation;
                 }
-                else if (Input.GetMouseButtonDown(1))
+                /*else if (Input.GetMouseButtonDown(1))
                 {
                     var draggable = hit.rigidbody.GetComponent<Draggable>();
-                    if (_allHeld.Contains(draggable))
+                    draggable.Unteather();
+                    if (_held == draggable)
                     {
-                        _allHeld.Remove(draggable);
-                        draggable.Drop();
-                        if (_held == draggable)
-                        {
-                            _held = null;
-                        }
+                        _held = null;
                     }
-                }
+                }*/
 
             }
         }
-        if (Input.GetMouseButtonUp(0) && _held != null)
+        if (Keyboard.current.zKey.isPressed && _held != null)
         {
-            _held.LockInCurrentPosition();
+            _held.Suspend();
+            _held = null;
+        }
+        if (Input.GetMouseButtonDown(1) && _held != null)
+        {
+            _held.Release();
             _held = null;
         }
 
@@ -93,9 +101,9 @@ public class HandTool : BaseTool
             var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
             var hyp = (float)(currHeldFlatDistance / cosTheta);
             _held.targetWorldPosition = cameraTransform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (sinTheta * hyp) + _heldOffsetInWorldSpace;
-            var newLookQuat = Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition);
-            var quat = ShortestPathBetweenTwoQuats(initialLookQuat, newLookQuat);
-            _held.targetWorldRotation = quat * initialRotationUponPickup;
+            //var newLookQuat = Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition);
+            //var quat = ShortestPathBetweenTwoQuats(initialLookQuat, newLookQuat);
+            //_held.targetWorldRotation = quat * initialRotationUponPickup;
         }
     }
 

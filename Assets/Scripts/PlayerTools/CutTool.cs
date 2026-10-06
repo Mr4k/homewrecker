@@ -98,6 +98,7 @@ public class CutTool : BaseTool
                 if (d > 0.1f)
                 {
                     Debug.Log("cutttt");
+                    var handTool = GetComponent<HandTool>();
                     // cut
                     var normal = SelectedCuttable.transform.localToWorldMatrix.MultiplyVector(LocalSliceableCutNormal);
                     SelectedCuttable.Slice(
@@ -105,7 +106,8 @@ public class CutTool : BaseTool
                         CutEye.transform.position + dir * r,
                         CutEye.transform.position - dir * r,
                         1000,
-                        camera
+                        camera,
+                        handTool
                     );
                 }
                 Deselect();

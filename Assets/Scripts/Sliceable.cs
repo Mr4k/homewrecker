@@ -188,7 +188,7 @@ public class Sliceable : MonoBehaviour
                 // account for the width of the saw and cut out a little material in the middle
                 // we do this by not moving the cap verts all the way to the plane
                 float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[smallerSubsetPartitionIdx];
-                float maxUnsignedSmallPartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
+                float maxUnsignedSmallPartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.05f, 0);
                 var smallPartitionVertsRetractionAmount = Math.Min(maxUnsignedSmallPartitionVertsRetractionAmount, 0.0f) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[smallerSubsetPartitionIdx];
@@ -241,7 +241,7 @@ public class Sliceable : MonoBehaviour
                 // account for the width of the saw and cut out a little material in the middle
                 // we do this by not moving the cap verts all the way to the plane
                 float closestDistanceToVertex = distanceAlongCutPlaneToClosetVertexInPartition[largerSubsetParitionIdx];
-                float maxUnsignedLargePartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.01f, 0);
+                float maxUnsignedLargePartitionVertsRetractionAmount = Math.Max(Math.Abs(closestDistanceToVertex) - 0.05f, 0);
                 var largePartitionVertsRetractionAmount = Math.Min(maxUnsignedLargePartitionVertsRetractionAmount, 0) * Math.Sign(closestDistanceToVertex);
 
                 var sameSideVertMapping = sameSideDirectVertexMapping[largerSubsetParitionIdx];
@@ -424,7 +424,7 @@ public class Sliceable : MonoBehaviour
         };
     }
 
-    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange, Camera cam)
+    public void Slice(Vector3 cameraPosition, Vector3 startPoint, Vector3 endPoint, float maxSliceRange, Camera cam, HandTool handTool)
     {
         var localCameraPosition = transform.worldToLocalMatrix.MultiplyPoint3x4(cameraPosition);
         var localStartPoint = transform.worldToLocalMatrix.MultiplyPoint3x4(startPoint);
@@ -552,6 +552,12 @@ public class Sliceable : MonoBehaviour
                     screw.SwapAttachedBody(screwableBody, secondScrewableBody);
                 }
             }
+        }
+
+        if (handTool != null)
+        {
+            var secondDraggable = secondSliceable.GetComponent<Draggable>();
+            handTool.SetAsHeldUp(secondDraggable);
         }
     }
 

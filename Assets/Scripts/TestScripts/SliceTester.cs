@@ -16,7 +16,7 @@ public class SliceTester : MonoBehaviour
         lr.SetPositions(new Vector3[2] { sliceStart, sliceEnd });
         if (!_hasSliced)
         {
-            testSubject.Slice(sliceCamera.transform.position, sliceStart, sliceEnd, 1000, sliceCamera);
+            testSubject.Slice(sliceCamera.transform.position, sliceStart, sliceEnd, 1000, sliceCamera, null);
             _hasSliced = true;
         }
     }
