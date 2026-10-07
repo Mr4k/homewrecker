@@ -21,6 +21,7 @@ public class HandTool : BaseTool
 
     // how far the object is from you on the xz place (unsigned)
     public float currHeldFlatDistance = 0;
+    private State state = State.Rotating;
 
     //public Quaternion initialRotationUponPickup;
     //public Quaternion initialLookQuat;
@@ -89,6 +90,23 @@ public class HandTool : BaseTool
         {
             _held.Release();
             _held = null;
+        }
+        if (state == State.Rotating && _held != null)
+        {
+            _held.Suspend();
+            Gimbal.Singleton.transform.position = _held.transform.position;
+        }
+
+        if (Keyboard.current.xKey.isPressed)
+        {
+            if (state == State.Grabbing)
+            {
+                state = State.Rotating;
+            }
+            else
+            {
+                state = State.Grabbing;
+            }
         }
 
         if (_held != null)
