@@ -26,6 +26,12 @@ public class HandTool : BaseTool
     //public Quaternion initialRotationUponPickup;
     //public Quaternion initialLookQuat;
 
+    private Nullable<Gimbal.RotationAxisName> axisSelected;
+    private Vector3 axisSelectedOriginPoint;
+    private Vector3 axisSelectedWorldTangent;
+
+    public LayerMask GimbalMask;
+
     public Quaternion ShortestPathBetweenTwoQuats(Quaternion b, Quaternion a)
     {
         if (Quaternion.Dot(a, b) < 0)
@@ -52,34 +58,54 @@ public class HandTool : BaseTool
     public override void ActiveToolUpdate(Camera camera)
     {
         Transform cameraTransform = camera.transform;
-        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, GrabRange))
+        if (_held == null)
         {
-            if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())
+            if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit, GrabRange))
+            {
+                if (hit.rigidbody && hit.rigidbody.GetComponent<Draggable>())
+                {
+                    if (Input.GetMouseButtonDown(0))
+                    {
+                        var draggable = hit.rigidbody.GetComponent<Draggable>();
+                        _held = draggable;
+                        _held.Pickup();
+                        _held.targetWorldRotation = _held.transform.rotation;
+                        var offset = _held.transform.position - hit.point;
+                        _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyVector(offset);
+                        _held.targetWorldPosition = hit.point;
+                        var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
+                        projectedFlatDistance.y = 0;
+                        currHeldFlatDistance = projectedFlatDistance.magnitude;
+                    }
+                }
+            }
+        }
+        if (_held != null && state == State.Rotating && axisSelected == null)
+        {
+            if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out RaycastHit hit2, GrabRange, GimbalMask))
             {
                 if (Input.GetMouseButtonDown(0))
                 {
-                    var draggable = hit.rigidbody.GetComponent<Draggable>();
-                    _held = draggable;
-                    _held.Pickup();
-                    _held.targetWorldRotation = _held.transform.rotation;
-                    var offset = _held.transform.position - hit.point;
-                    _heldGrabOffsetInHeldLocalSpace = _held.transform.worldToLocalMatrix.MultiplyVector(offset);
-                    _held.targetWorldPosition = hit.point;
-                    var projectedFlatDistance = _held.targetWorldPosition - cameraTransform.position;
-                    projectedFlatDistance.y = 0;
-                    currHeldFlatDistance = projectedFlatDistance.magnitude;
+                    var tangentData = Gimbal.Singleton.GetTangent(hit2.collider, hit2.point);
+                    axisSelected = tangentData.LocalAxis;
+                    axisSelectedOriginPoint = tangentData.WorldSpacePoint;
+                    axisSelectedWorldTangent = tangentData.WorldSpaceTangent;
+                    Debug.Log("chose axis " + axisSelected);
                 }
-                /*else if (Input.GetMouseButtonDown(1))
-                {
-                    var draggable = hit.rigidbody.GetComponent<Draggable>();
-                    draggable.Unteather();
-                    if (_held == draggable)
-                    {
-                        _held = null;
-                    }
-                }*/
-
             }
+        }
+        if (Input.GetMouseButton(0) && state == State.Rotating && _held != null && axisSelected != null)
+        {
+            //Input.mousePositionDelta
+            Vector3 p1 = camera.WorldToScreenPoint(axisSelectedOriginPoint);
+            Vector3 p2 = camera.WorldToScreenPoint(axisSelectedOriginPoint + axisSelectedWorldTangent);
+            Vector3 normalizedScreenSpaceTangentDirection = (p2 - p1).normalized;
+            float deltaProjection = Vector3.Dot(Input.mousePositionDelta, normalizedScreenSpaceTangentDirection);
+            Debug.Log("delta projection:" + deltaProjection);
+        }
+        if (Input.GetMouseButtonUp(0) && state == State.Rotating)
+        {
+            axisSelected = null;
         }
         if (Keyboard.current.zKey.isPressed && _held != null)
         {
@@ -106,6 +132,7 @@ public class HandTool : BaseTool
             else
             {
                 state = State.Grabbing;
+                axisSelected = null;
             }
         }
 
@@ -119,9 +146,6 @@ public class HandTool : BaseTool
             var cosTheta = Math.Sqrt(1 - sinTheta * sinTheta);
             var hyp = (float)(currHeldFlatDistance / cosTheta);
             _held.targetWorldPosition = cameraTransform.position + new Vector3(Mathf.Cos(currXZPlaneTargetAngle), 0, Mathf.Sin(currXZPlaneTargetAngle)) * currHeldFlatDistance + Vector3.up * (sinTheta * hyp) + _heldOffsetInWorldSpace;
-            //var newLookQuat = Quaternion.LookRotation(new Vector3(cameraTransform.position.x, _held.targetWorldPosition.y, cameraTransform.position.z) - _held.targetWorldPosition);
-            //var quat = ShortestPathBetweenTwoQuats(initialLookQuat, newLookQuat);
-            //_held.targetWorldRotation = quat * initialRotationUponPickup;
         }
     }
 
