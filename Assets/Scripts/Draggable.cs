@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Animations;
 
 enum DragState
 {
@@ -47,38 +48,131 @@ public class Draggable : MonoBehaviour
                 var totalGoalVelChange = goalDiff.magnitude * goalAxis * 10 - goalVel;
                 totalGoalVelChange = totalGoalVelChange.normalized * Math.Min(totalGoalVelChange.magnitude, maxGoalDiffVelChange);
                 _rigidbody.AddForce(totalGoalVelChange, ForceMode.VelocityChange);
+                var it = _rigidbody.inertiaTensor;
+                it.x = 1;
+                it.y = 1;
+                it.z = 1;
+                _rigidbody.inertiaTensor = it;
                 break;
             case DragState.Suspended:
                 _rigidbody.isKinematic = true;
                 _rigidbody.constraints = RigidbodyConstraints.None;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.useGravity = true;
+                it = _rigidbody.inertiaTensor;
+                it.x = 1;
+                it.y = 1;
+                it.z = 1;
+                _rigidbody.inertiaTensor = it;
                 break;
             case DragState.None:
                 _rigidbody.isKinematic = false;
                 _rigidbody.constraints = RigidbodyConstraints.None;
                 _rigidbody.useGravity = true;
                 _rigidbody.freezeRotation = true;
+                it = _rigidbody.inertiaTensor;
+                it.x = 1;
+                it.y = 1;
+                it.z = 1;
+                _rigidbody.inertiaTensor = it;
                 break;
             case DragState.RotatingX:
+                // rotation
+                var delta = targetWorldRotation * Quaternion.Inverse(_rigidbody.rotation);
+                delta.ToAngleAxis(out float angDeg, out Vector3 axis);
+                float angRad = angDeg * Mathf.Deg2Rad;
+                Vector3 torque = axis.normalized * (angRad * 5) - _rigidbody.angularVelocity * 0.8f;
+                _rigidbody.AddTorque(torque, ForceMode.VelocityChange);
                 _rigidbody.isKinematic = false;
                 _rigidbody.useGravity = false;
-                _rigidbody.constraints = RigidbodyConstraints.FreezeAll ^ RigidbodyConstraints.FreezeRotationX;
                 _rigidbody.freezeRotation = false;
+                _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
+                it = _rigidbody.inertiaTensor;
+                it.x = 1;
+                it.y = 100;
+                it.z = 100;
+                _rigidbody.inertiaTensor = it;
+                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
                 break;
             case DragState.RotatingY:
+                // rotation
+                delta = targetWorldRotation * Quaternion.Inverse(_rigidbody.rotation);
+                delta.ToAngleAxis(out angDeg, out axis);
+                angRad = angDeg * Mathf.Deg2Rad;
+                torque = axis.normalized * (angRad * 5) - _rigidbody.angularVelocity * 0.8f;
+                _rigidbody.AddTorque(torque, ForceMode.VelocityChange);
                 _rigidbody.isKinematic = false;
                 _rigidbody.useGravity = false;
-                _rigidbody.constraints = RigidbodyConstraints.FreezeAll ^ RigidbodyConstraints.FreezeRotationY;
                 _rigidbody.freezeRotation = false;
+                _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
+                // b/c we rotate via direct acceleration changes the inertial tensor can be gigantic
+                it = _rigidbody.inertiaTensor;
+                it.x = 100;
+                it.y = 1;
+                it.z = 100;
+                _rigidbody.inertiaTensor = it;
+                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
                 break;
             case DragState.RotatingZ:
+                // rotation
+                delta = targetWorldRotation * Quaternion.Inverse(_rigidbody.rotation);
+                delta.ToAngleAxis(out angDeg, out axis);
+                angRad = angDeg * Mathf.Deg2Rad;
+                torque = axis.normalized * (angRad * 5) - _rigidbody.angularVelocity * 0.8f;
+                _rigidbody.AddTorque(torque, ForceMode.VelocityChange);
                 _rigidbody.isKinematic = false;
                 _rigidbody.useGravity = false;
-                _rigidbody.constraints = RigidbodyConstraints.FreezeAll ^ RigidbodyConstraints.FreezeRotationZ;
                 _rigidbody.freezeRotation = false;
+                _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
+                // b/c we rotate via direct acceleration changes the inertial tensor can be gigantic
+                it = _rigidbody.inertiaTensor;
+                it.x = 100;
+                it.y = 100;
+                it.z = 1;
+                _rigidbody.inertiaTensor = it;
+                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
                 break;
         }
+    }
+
+    protected void LateUpdate()
+    {
+        /*switch (state)
+        {
+            case DragState.RotatingX:
+                var _rigidbody = GetComponent<Rigidbody>();
+                _rigidbody.angularVelocity = Vector3.Project(_rigidbody.angularVelocity, transform.right);
+                break;
+            case DragState.RotatingY:
+                _rigidbody = GetComponent<Rigidbody>();
+                _rigidbody.angularVelocity = Vector3.Project(_rigidbody.angularVelocity, transform.up);
+                break;
+            case DragState.RotatingZ:
+                _rigidbody = GetComponent<Rigidbody>();
+                _rigidbody.angularVelocity = Vector3.Project(_rigidbody.angularVelocity, transform.forward);
+                break;
+        }*/
+    }
+
+    public void EnableRotation(Gimbal.RotationAxisName localAxis)
+    {
+        switch (localAxis)
+        {
+            case Gimbal.RotationAxisName.X:
+                state = DragState.RotatingX;
+                break;
+            case Gimbal.RotationAxisName.Y:
+                state = DragState.RotatingY;
+                break;
+            case Gimbal.RotationAxisName.Z:
+                state = DragState.RotatingZ;
+                break;
+        }
+    }
+
+    public void DisableRotation()
+    {
+        state = DragState.Suspended;
     }
 
     public virtual void Pickup()
@@ -89,6 +183,7 @@ public class Draggable : MonoBehaviour
     public void Suspend()
     {
         targetWorldPosition = transform.position;
+        targetWorldRotation = transform.rotation;
         state = DragState.Suspended;
     }
 

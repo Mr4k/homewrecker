@@ -29,6 +29,7 @@ public class HandTool : BaseTool
     private Nullable<Gimbal.RotationAxisName> axisSelected;
     private Vector3 axisSelectedOriginPoint;
     private Vector3 axisSelectedWorldTangent;
+    private Vector3 axisToRotateAround;
 
     public LayerMask GimbalMask;
 
@@ -90,6 +91,8 @@ public class HandTool : BaseTool
                     axisSelected = tangentData.LocalAxis;
                     axisSelectedOriginPoint = tangentData.WorldSpacePoint;
                     axisSelectedWorldTangent = tangentData.WorldSpaceTangent;
+                    axisToRotateAround = tangentData.WorldSpaceNormal;
+                    _held.EnableRotation(tangentData.LocalAxis);
                     Debug.Log("chose axis " + axisSelected);
                 }
             }
@@ -102,10 +105,12 @@ public class HandTool : BaseTool
             Vector3 normalizedScreenSpaceTangentDirection = (p2 - p1).normalized;
             float deltaProjection = Vector3.Dot(Input.mousePositionDelta, normalizedScreenSpaceTangentDirection);
             Debug.Log("delta projection:" + deltaProjection);
+            _held.targetWorldRotation = Quaternion.AngleAxis(deltaProjection * 2, axisToRotateAround) * _held.targetWorldRotation;
         }
-        if (Input.GetMouseButtonUp(0) && state == State.Rotating)
+        if (Input.GetMouseButtonUp(0) && state == State.Rotating && _held != null && axisSelected != null)
         {
             axisSelected = null;
+            _held.DisableRotation();
         }
         if (Keyboard.current.zKey.isPressed && _held != null)
         {
@@ -117,7 +122,11 @@ public class HandTool : BaseTool
             _held.Release();
             _held = null;
         }
-        if (state == State.Rotating && _held != null)
+        if (state == State.Rotating && axisSelected != null)
+        {
+            Gimbal.Singleton.transform.rotation = _held.transform.rotation;
+        }
+        if (state == State.Rotating && _held != null && axisSelected == null)
         {
             _held.Suspend();
             Gimbal.Singleton.transform.position = _held.transform.position;
