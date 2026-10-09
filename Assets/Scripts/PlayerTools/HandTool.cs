@@ -33,6 +33,13 @@ public class HandTool : BaseTool
 
     public LayerMask GimbalMask;
 
+    InputAction ChangeHoldTypeAction;
+
+    public void Start()
+    {
+        ChangeHoldTypeAction = InputSystem.actions.FindAction("Jump");
+    }
+
     public Quaternion ShortestPathBetweenTwoQuats(Quaternion b, Quaternion a)
     {
         if (Quaternion.Dot(a, b) < 0)
@@ -132,7 +139,7 @@ public class HandTool : BaseTool
             Gimbal.Singleton.transform.position = _held.transform.position;
         }
 
-        if (Keyboard.current.xKey.isPressed)
+        if (ChangeHoldTypeAction.WasPressedThisFrame())
         {
             if (state == State.Grabbing)
             {
@@ -172,6 +179,6 @@ public class HandTool : BaseTool
     }
     public override string GetName()
     {
-        return "Grabber";
+        return "Grabber (" + state + ")";
     }
 }

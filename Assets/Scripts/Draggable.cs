@@ -23,6 +23,9 @@ public class Draggable : MonoBehaviour
     public float maxRotationCorrectionAngularVelChange = 10;
     private DragState state;
     private Quaternion targetRotation;
+
+    int numCollisions = 0;
+
     private void FixedUpdate()
     {
         var _rigidbody = GetComponent<Rigidbody>();
@@ -59,22 +62,12 @@ public class Draggable : MonoBehaviour
                 _rigidbody.constraints = RigidbodyConstraints.None;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.useGravity = true;
-                it = _rigidbody.inertiaTensor;
-                it.x = 1;
-                it.y = 1;
-                it.z = 1;
-                _rigidbody.inertiaTensor = it;
                 break;
             case DragState.None:
                 _rigidbody.isKinematic = false;
                 _rigidbody.constraints = RigidbodyConstraints.None;
                 _rigidbody.useGravity = true;
                 _rigidbody.freezeRotation = true;
-                it = _rigidbody.inertiaTensor;
-                it.x = 1;
-                it.y = 1;
-                it.z = 1;
-                _rigidbody.inertiaTensor = it;
                 break;
             case DragState.RotatingX:
                 // rotation
@@ -87,12 +80,10 @@ public class Draggable : MonoBehaviour
                 _rigidbody.useGravity = false;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
-                it = _rigidbody.inertiaTensor;
-                it.x = 1;
-                it.y = 100;
-                it.z = 100;
-                _rigidbody.inertiaTensor = it;
-                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
+                foreach (var comp in GetComponentsInChildren<Collider>())
+                {
+                    comp.isTrigger = true;
+                }
                 break;
             case DragState.RotatingY:
                 // rotation
@@ -105,13 +96,10 @@ public class Draggable : MonoBehaviour
                 _rigidbody.useGravity = false;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
-                // b/c we rotate via direct acceleration changes the inertial tensor can be gigantic
-                it = _rigidbody.inertiaTensor;
-                it.x = 100;
-                it.y = 1;
-                it.z = 100;
-                _rigidbody.inertiaTensor = it;
-                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
+                foreach (var comp in GetComponentsInChildren<Collider>())
+                {
+                    comp.isTrigger = true;
+                }
                 break;
             case DragState.RotatingZ:
                 // rotation
@@ -124,15 +112,22 @@ public class Draggable : MonoBehaviour
                 _rigidbody.useGravity = false;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.constraints = RigidbodyConstraints.FreezePosition;
-                // b/c we rotate via direct acceleration changes the inertial tensor can be gigantic
-                it = _rigidbody.inertiaTensor;
-                it.x = 100;
-                it.y = 100;
-                it.z = 1;
-                _rigidbody.inertiaTensor = it;
-                _rigidbody.inertiaTensorRotation = _rigidbody.transform.rotation;
+                foreach (var comp in GetComponentsInChildren<Collider>())
+                {
+                    comp.isTrigger = true;
+                }
                 break;
         }
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        numCollisions += 1;
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        numCollisions -= 1;
     }
 
     protected void LateUpdate()
